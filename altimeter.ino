@@ -2,7 +2,9 @@
 #include "Wire.h"
 
 BMP280 bmp;
+#include "U8glib.h"
 
+U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_DEV_0|U8G_I2C_OPT_NO_ACK|U8G_I2C_OPT_FAST);  
 double baseline;
 
 void setup()
@@ -24,7 +26,7 @@ void loop()
 {
   double T,P;
   char result = bmp.startMeasurment();
- 
+  char dval[10];
   if(result!=0){
     delay(result);
     result = bmp.getTemperatureAndPressure(T,P);
@@ -36,6 +38,18 @@ void loop()
         Serial.print("T = \t");Serial.print(T,2); Serial.print(" degC\t");
         Serial.print("P = \t");Serial.print(P,2); Serial.print(" mBar\t");
         Serial.print("A = \t");Serial.print(A,0); Serial.println(" m");
+        if (A > 1000)
+        {
+          dtostrf(A/1000, 1, 1, dval);
+        }
+        else if (A < 0)
+        {
+          dtostrf(0, 1, 0, dval);
+        }
+        else
+        {
+          dtostrf(A, 1, 0, dval);
+        }
        
       }
       else {
@@ -45,8 +59,14 @@ void loop()
   else {
     Serial.println("Error.");
   }
+  u8g.firstPage();  
+  do {
+    u8g.setFont(u8g_font_fub49n);
   
-  delay(500);
+    u8g.drawStr( 10, 55, dval);
+  } while( u8g.nextPage() );
+  
+  delay(1000);
 }
 
 // set a reference pressure, smooth it and use this as 0m
