@@ -9,4 +9,4 @@ Visual alti works with neopixel led strip. Any arduino works fine. You will also
 ### Todo
 * ground detection
 * flight detection
-* freefall detection
+* freefall detection - probably take two measurments 1s apart and if the altitude diff is more than 35m/s we are in freefall
