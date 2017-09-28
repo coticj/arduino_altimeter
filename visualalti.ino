@@ -5,7 +5,6 @@
 #include <Adafruit_BMP280.h>
 #include <Adafruit_NeoPixel.h>
 
-
 Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, PIN, NEO_GRB + NEO_KHZ800);           
 int aboveCheck = 0;
@@ -23,8 +22,6 @@ uint32_t green = strip.Color(0, 255, 0);
 uint32_t blue = strip.Color(0, 0, 255);
 uint32_t white = strip.Color(127, 127, 127);
 
-
-
 void setup()
 {
   Serial.begin(9600);
@@ -38,9 +35,7 @@ void setup()
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   flashStrip(green, 2,500); // Green, signal ready: 3 times 100ms delay
-  
 }
-
 
 void loop() {
     alti=bmp.readAltitude(baseline);
@@ -75,9 +70,9 @@ double getBaseline(){
   double bs;
   int numReadings = 10;
 
-  double readings[numReadings];      // the readings from the analog input
-  int readIndex = 0;              // the index of the current reading
-  double total = 0;                  // the running total
+  double readings[numReadings]; 
+  int readIndex = 0;
+  double total = 0;
   double average = 0; 
   int thisReading = 0;
   
@@ -114,13 +109,5 @@ void fullColor(uint32_t c) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
     strip.show();    
-  }
-}
-
-void colorWipe(uint32_t c, uint8_t wait) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-    strip.show();
-    delay(wait);
   }
 }
