@@ -1,4 +1,13 @@
-int ledPin = 2;                
+#define PIN 15   
+#include <Wire.h>
+#include <SPI.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP280.h>
+#include <Adafruit_NeoPixel.h>
+
+
+Adafruit_BMP280 bmp; // I2C
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, PIN, NEO_GRB + NEO_KHZ800);           
 int aboveCheck = 0;
 int aboveBreak = 0;
 double baseline, alti;
@@ -8,17 +17,13 @@ int checkAlti = 300; // we passed 300, signal
 int breakAlti = 1550; // breakoff, signal
 int openAlti = 1000; // we are open, stop signaling
 
-#include <Wire.h>
-#include <SPI.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BMP280.h>
+//colors
+uint32_t red = strip.Color(255, 0, 0);
+uint32_t green = strip.Color(0, 255, 0);
+uint32_t blue = strip.Color(0, 0, 255);
+uint32_t white = strip.Color(127, 127, 127);
 
-#define BMP_SCK 13
-#define BMP_MISO 12
-#define BMP_MOSI 11 
-#define BMP_CS 10
 
-Adafruit_BMP280 bmp; // I2C
 
 void setup()
 {
@@ -29,14 +34,15 @@ void setup()
     while (1);
   }
   baseline=getBaseline();
-  pinMode(ledPin, OUTPUT);      // sets the digital pin as output
   Serial.println(baseline);
-  blinkLed(4,200); // turned on
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+  flashStrip(green, 2,500); // Green, signal ready: 3 times 100ms delay
+  
 }
 
 
-void loop()
-{
+void loop() {
     alti=bmp.readAltitude(baseline);
     Serial.print(F("Curr alt = "));
     Serial.print(alti); //
@@ -45,16 +51,16 @@ void loop()
     
     if (alti > checkAlti && aboveCheck == 0) {
       aboveCheck = 1;
-      blinkLed(3,200);
+      flashStrip(blue,3,200); //we passed 300m, flash
     }
 
     if (alti > breakAlti && aboveBreak == 0) {
       aboveBreak = 1;
-      blinkLed(2,500);
+      flashStrip(red,2,500); //we passed breakoff altitude, flash
     }
 
     if (alti < breakAlti && aboveBreak == 1) {
-      blinkLed(20,200);
+     flashStrip(red,20,200);
     }
 
     if (alti < openAlti && aboveBreak == 1) {
@@ -95,12 +101,26 @@ double getBaseline(){
   return bs;
 }
 
-void blinkLed(int numTimes, int duration){
-   int i;
-   for (i = 0; i < numTimes; i++){
-    digitalWrite(ledPin, HIGH);
+void flashStrip(uint32_t color, int numTimes, int duration){
+   for (int i = 0; i < numTimes; i++){
+    fullColor(color);
     delay(duration);
-    digitalWrite(ledPin, LOW);
+    fullColor(strip.Color(0, 0, 0));
     delay(duration);
    }   
+}
+
+void fullColor(uint32_t c) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, c);
+    strip.show();    
+  }
+}
+
+void colorWipe(uint32_t c, uint8_t wait) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, c);
+    strip.show();
+    delay(wait);
+  }
 }
