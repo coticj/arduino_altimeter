@@ -9,6 +9,7 @@ Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
 int aboveCheck = 0;
 int aboveBreak = 0;
+int aboveOpen = 0;
 double baseline, alti;
 
 //settings
@@ -21,6 +22,13 @@ uint32_t red = strip.Color(255, 0, 0);
 uint32_t green = strip.Color(0, 255, 0);
 uint32_t blue = strip.Color(0, 0, 255);
 uint32_t white = strip.Color(127, 127, 127);
+
+// Generally, you should use "unsigned long" for variables that hold time
+// The value will quickly become too large for an int to store
+unsigned long previousMillis = 0;        // will store last time LED was updated
+
+// constants won't change:
+const long interval = 1000;           // interval at which to measure (milliseconds)
 
 void setup()
 {
@@ -38,6 +46,12 @@ void setup()
 }
 
 void loop() {
+    unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= interval) {
+    // save the last time you blinked the LED
+    previousMillis = currentMillis;
+
     alti=bmp.readAltitude(baseline);
     Serial.print(F("Curr alt = "));
     Serial.print(alti); //
@@ -49,20 +63,32 @@ void loop() {
       flashStrip(blue,3,200); //we passed 300m, flash
     }
 
+    if (alti > openAlti && aboveOpen == 0) {
+      aboveOpen = 1;
+      flashStrip(white,2,200); //we passed 300m, flash
+    }
+
     if (alti > breakAlti && aboveBreak == 0) {
       aboveBreak = 1;
-      flashStrip(red,2,500); //we passed breakoff altitude, flash
+      flashStrip(white,2,500); //we passed breakoff altitude, flash
     }
 
     if (alti < breakAlti && aboveBreak == 1) {
-     flashStrip(red,20,200);
-    }
-
-    if (alti < openAlti && aboveBreak == 1) {
+      flashStrip(red,10,200);
       aboveBreak = 0;
     }
 
-    delay(1000);
+    if (alti < openAlti && aboveOpen == 1) {
+      flashStrip(red,10,200);
+      aboveOpen = 0;
+    }
+
+    if (alti < checkAlti && aboveCheck == 1) {
+      aboveCheck = 0;
+    }
+   
+  }
+    
 }
 
 // set a reference pressure, smooth it and use this as 0m
