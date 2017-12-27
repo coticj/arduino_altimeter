@@ -23,14 +23,22 @@ int openAlti = 1000; // we are open, stop signaling
 uint32_t red = strip.Color(255, 0, 0);
 uint32_t green = strip.Color(0, 255, 0);
 uint32_t blue = strip.Color(0, 0, 255);
+uint32_t yellow = strip.Color(255, 255, 0);
 uint32_t white = strip.Color(127, 127, 127);
+uint32_t brightWhite = strip.Color(255, 255, 255);
 
 // Generally, you should use "unsigned long" for variables that hold time
 // The value will quickly become too large for an int to store
 unsigned long previousMillis = 0;        // will store last time LED was updated
 
 // constants won't change:
-const long interval = 1000;           // interval at which to measure (milliseconds)
+const long interval = 500;           // interval at which to measure (milliseconds)
+
+bool emulate = true;
+
+int emulatorAltitude = 4600;
+
+void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 0);
 
 void setup()
 {
@@ -41,21 +49,21 @@ void setup()
     while (1);
   }
   SPIFFS.begin();
-  baseline=getBaseline();
+  baseline = getBaseline();
   Serial.println(baseline);
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
-  flashStrip(green, 2,500); // Green, signal ready: 3 times 100ms delay
+  flashStrip(green, 2, 500, 200); // Signal
 }
 
 void loop() {
-    unsigned long currentMillis = millis();
+  unsigned long currentMillis = millis();
 
   if (currentMillis - previousMillis >= interval) {
     // save the last time you blinked the LED
     previousMillis = currentMillis;
 
-    alti=bmp.readAltitude(baseline);
+    alti = getAltitude();
     Serial.print(F("Curr alt = "));
     Serial.print(alti); //
     Serial.println(" m");
@@ -65,57 +73,78 @@ void loop() {
       // open file for writing
       File f = SPIFFS.open("/f.txt", "w");
       if (!f) {
-          Serial.println("file open failed");
+        Serial.println("file open failed");
       }
       Serial.println("====== Writing to SPIFFS file =========");
-      
-      
-        f.print(currentMillis);
-        f.print(",");
-        f.println(alti);
-        Serial.println(millis());
-      
-    
+
+
+      f.print(currentMillis);
+      f.print(",");
+      f.println(alti);
+      Serial.println(millis());
+
+
       f.close();
     }
-     
 
 
-    if (alti > checkAlti && aboveCheck == 0) {
-      aboveCheck = 1;
-      flashStrip(blue,3,200); //we passed 300m, flash
+    if (!emulate) {
+      if (alti > checkAlti && aboveCheck == 0) {
+        aboveCheck = 1;
+        flashStrip(blue, 3, 200); //we passed 300m, flash
+      }
+
+      if (alti > openAlti && aboveOpen == 0) {
+        aboveOpen = 1;
+        flashStrip(white, 2, 200); //we passed 300m, flash
+      }
+
+      if (alti > breakAlti && aboveBreak == 0) {
+        aboveBreak = 1;
+        flashStrip(white, 2, 500); //we passed breakoff altitude, flash
+      }
+
+      if (alti < breakAlti && aboveBreak == 1) {
+        flashStrip(red, 10, 200);
+        aboveBreak = 0;
+      }
+
+      if (alti < openAlti && aboveOpen == 1) {
+        flashStrip(red, 10, 200);
+        aboveOpen = 0;
+      }
+
+      if (alti < checkAlti && aboveCheck == 1) {
+        aboveCheck = 0;
+      }
     }
 
-    if (alti > openAlti && aboveOpen == 0) {
-      aboveOpen = 1;
-      flashStrip(white,2,200); //we passed 300m, flash
+    // modra za 1000 m, rumena za 500 m
+    if (int(alti) % 500 == 0) {
+      flashStrip(blue, int(alti) / 1000, 500, 200);
+      if (int(alti) % 1000 == 500) {
+        flashStrip(yellow, 1, 500, 200);
+      }
     }
 
-    if (alti > breakAlti && aboveBreak == 0) {
-      aboveBreak = 1;
-      flashStrip(white,2,500); //we passed breakoff altitude, flash
+    if (emulate && emulatorAltitude >= 25)
+    {
+      emulatorAltitude -= 25;
     }
-
-    if (alti < breakAlti && aboveBreak == 1) {
-      flashStrip(red,10,200);
-      aboveBreak = 0;
-    }
-
-    if (alti < openAlti && aboveOpen == 1) {
-      flashStrip(red,10,200);
-      aboveOpen = 0;
-    }
-
-    if (alti < checkAlti && aboveCheck == 1) {
-      aboveCheck = 0;
-    }
-   
   }
-    
+}
+
+double getAltitude() {
+  if (emulate) {
+    return emulatorAltitude;
+  }
+  else {
+    return bmp.readAltitude(baseline);
+  }
 }
 
 // set a reference pressure, smooth it and use this as 0m
-double getBaseline(){
+double getBaseline() {
   double bs;
   int numReadings = 10;
 
@@ -123,40 +152,46 @@ double getBaseline(){
   int readIndex = 0;
   double total = 0;
   double average = 0;
-  int thisReading = 0;
 
-  for (thisReading; thisReading < numReadings; thisReading++) {
-    readings[thisReading] = 0;
+  for (readIndex; readIndex < numReadings; readIndex++) {
+    readings[readIndex] = 0;
   }
 
   readIndex = 0;
-  thisReading = 0;
   //make 10 measurments and then return the average pressure
-  for (thisReading; thisReading < numReadings; thisReading++) {
-
-    readings[thisReading]=bmp.readPressure();
+  for (readIndex; readIndex < numReadings; readIndex++) {
+    readings[readIndex] = bmp.readPressure();
     total = total + readings[readIndex];
-    readIndex = readIndex + 1;
     delay(100);
   }
   average = total / numReadings;
-  bs=average/100;
+  bs = average / 100;
 
   return bs;
 }
 
-void flashStrip(uint32_t color, int numTimes, int duration){
-   for (int i = 0; i < numTimes; i++){
+void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration) {
+  if (offDuration == 0) {
+    offDuration = onDuration;
+  };
+  for (int i = 0; i < numTimes; i++) {
     fullColor(color);
-    delay(duration);
-    fullColor(strip.Color(0, 0, 0));
-    delay(duration);
-   }
+    delay(onDuration);
+    turnLightsOff();
+    delay(offDuration);
+  }
 }
 
 void fullColor(uint32_t c) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
+  for (uint16_t i = 0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
+    strip.show();
+  }
+}
+
+void turnLightsOff() {
+  for (uint16_t i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, strip.Color(0, 0, 0));
     strip.show();
   }
 }
