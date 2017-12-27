@@ -38,7 +38,7 @@ bool emulate = true;
 
 int emulatorAltitude = 4600;
 
-void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 0);
+void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 0, int finalDelay = 0);
 
 void setup()
 {
@@ -54,6 +54,8 @@ void setup()
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   flashStrip(green, 2, 500, 200); // Signal
+  flashStrip(white, 1, 500, 200);
+  flashStrip(brightWhite, 1, 500, 200);
 }
 
 void loop() {
@@ -77,17 +79,14 @@ void loop() {
       }
       Serial.println("====== Writing to SPIFFS file =========");
 
-
       f.print(currentMillis);
       f.print(",");
       f.println(alti);
       Serial.println(millis());
 
-
       f.close();
     }
-
-
+    
     if (!emulate) {
       if (alti > checkAlti && aboveCheck == 0) {
         aboveCheck = 1;
@@ -120,16 +119,16 @@ void loop() {
     }
 
     // modra za 1000 m, rumena za 500 m
-    if (int(alti) % 500 == 0) {
-      flashStrip(blue, int(alti) / 1000, 500, 200);
+    if (int(alti) % 500 == 0 && alti > 0) {
+      flashStrip(red, 1, 200, 400);
+      flashStrip(blue, int(alti) / 1000, 500, 200, 200);
       if (int(alti) % 1000 == 500) {
-        flashStrip(yellow, 1, 500, 200);
+        flashStrip(yellow, 1, 200);
       }
     }
 
-    if (emulate && emulatorAltitude >= 25)
-    {
-      emulatorAltitude -= 25;
+    if (emulate && emulatorAltitude >= 25) {
+      emulatorAltitude -= 50;
     }
   }
 }
@@ -170,7 +169,7 @@ double getBaseline() {
   return bs;
 }
 
-void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration) {
+void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, int finalDelay) {
   if (offDuration == 0) {
     offDuration = onDuration;
   };
@@ -179,6 +178,9 @@ void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration) {
     delay(onDuration);
     turnLightsOff();
     delay(offDuration);
+  }
+  if (finalDelay > 0) {
+    delay(finalDelay);
   }
 }
 
