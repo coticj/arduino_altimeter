@@ -4,6 +4,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
 #include <Adafruit_NeoPixel.h>
+#include "FS.h"
+#include <SPIFFS.h>
 
 Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
@@ -38,6 +40,7 @@ void setup()
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
     while (1);
   }
+  SPIFFS.begin();
   baseline=getBaseline();
   Serial.println(baseline);
   strip.begin();
@@ -57,6 +60,26 @@ void loop() {
     Serial.print(alti); //
     Serial.println(" m");
     Serial.println();
+
+    if (alti > 10) {
+      // open file for writing
+      File f = SPIFFS.open("/f.txt", "w");
+      if (!f) {
+          Serial.println("file open failed");
+      }
+      Serial.println("====== Writing to SPIFFS file =========");
+      
+      
+        f.print(currentMillis);
+        f.print(",");
+        f.println(alti);
+        Serial.println(millis());
+      
+    
+      f.close();
+    }
+     
+
 
     if (alti > checkAlti && aboveCheck == 0) {
       aboveCheck = 1;
