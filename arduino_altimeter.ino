@@ -24,8 +24,8 @@ uint32_t red = strip.Color(255, 0, 0);
 uint32_t green = strip.Color(0, 255, 0);
 uint32_t blue = strip.Color(0, 0, 255);
 uint32_t yellow = strip.Color(255, 255, 0);
+uint32_t orange = strip.Color(255, 127, 0);
 uint32_t white = strip.Color(127, 127, 127);
-uint32_t brightWhite = strip.Color(255, 255, 255);
 
 // Generally, you should use "unsigned long" for variables that hold time
 // The value will quickly become too large for an int to store
@@ -38,7 +38,11 @@ bool emulate = true;
 
 int emulatorAltitude = 4600;
 
-void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 0);
+void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 0, int finalDelay = -1);
+
+double altiReadings[1200]; //10 min odčitkov na pol sekunde
+int altiReadingsIndex = 0;
+int emulatorLoopIndex = 0;
 
 void setup()
 {
@@ -49,11 +53,12 @@ void setup()
     while (1);
   }
   SPIFFS.begin();
+
   baseline = getBaseline();
   Serial.println(baseline);
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
-  flashStrip(green, 2, 500, 200); // Signal
+  flashStrip(green, 2, 500, 200); // Signal OK
 }
 
 void loop() {
@@ -66,27 +71,15 @@ void loop() {
     alti = getAltitude();
     Serial.print(F("Curr alt = "));
     Serial.print(alti); //
-    Serial.println(" m");
+    Serial.print(" m (");
+    Serial.print(altiReadingsIndex);
+    Serial.println(")");
     Serial.println();
 
     if (alti > 10) {
-      // open file for writing
-      File f = SPIFFS.open("/f.txt", "w");
-      if (!f) {
-        Serial.println("file open failed");
-      }
-      Serial.println("====== Writing to SPIFFS file =========");
-
-
-      f.print(currentMillis);
-      f.print(",");
-      f.println(alti);
-      Serial.println(millis());
-
-
-      f.close();
+      Serial.print(millis());
+      Serial.println(" ms");
     }
-
 
     if (!emulate) {
       if (alti > checkAlti && aboveCheck == 0) {
@@ -119,17 +112,77 @@ void loop() {
       }
     }
 
-    // modra za 1000 m, rumena za 500 m
-    if (int(alti) % 500 == 0) {
-      flashStrip(blue, int(alti) / 1000, 500, 200);
+    // modra za 1000 m, oranžna za 500 m
+    if (int(alti) % 500 == 0 && alti > 0) {
+      flashStrip(red, 1, 100, 300); // kratek rdeč za pozornost?
+      flashStrip(blue, int(alti) / 1000, 300, 100, 300);
       if (int(alti) % 1000 == 500) {
-        flashStrip(yellow, 1, 500, 200);
+        flashStrip(orange, 1, 100);
       }
     }
 
-    if (emulate && emulatorAltitude >= 25)
-    {
-      emulatorAltitude -= 25;
+    if (emulate && emulatorAltitude >= 25 && emulatorLoopIndex > 20) {
+      emulatorAltitude -= 50;
+    }
+
+    altiReadings[altiReadingsIndex] = alti;
+
+    // preveri, če še ni prosti pad
+    if (altiReadingsIndex == 10 &&
+        altiReadings[altiReadingsIndex] == altiReadings[altiReadingsIndex - 10]) {
+      int i = 0;
+      for (i; i < 10; i++) {
+        altiReadings[i] = altiReadings[i + 1];
+      }
+      altiReadingsIndex--;
+    }
+
+    altiReadingsIndex++;
+    emulatorLoopIndex++;
+
+    // preveri, če je na tleh
+    if (altiReadingsIndex > 20 &&
+        altiReadings[altiReadingsIndex] == altiReadings[altiReadingsIndex - 10] && alti < 100) {
+      //write array to file
+      // open file for writing
+      File f = SPIFFS.open("/f.txt", "a");
+      if (!f) {
+        Serial.println("file open failed");
+      }
+      Serial.println("====== Writing to SPIFFS file =========");
+      f.print("{ \"interval\": ");
+      f.print(interval);
+      f.println(", ");
+      f.print("\"altitudes\": [ ");
+      int i = 0;
+      for (i; i <= altiReadingsIndex; i++) {
+        f.print(altiReadings[i]);
+        if (i < altiReadingsIndex) {
+          f.print(", ");
+        }
+      }
+      f.println(" ]");
+      f.println(" }, ");
+
+      f.close();
+      f = SPIFFS.open("/f.txt", "r");
+
+      String s;
+      while (f.available()) {
+        s += char(f.read());
+      }
+      f.close();
+      int s_end = s.lastIndexOf(",");
+      s.remove(s_end);
+      Serial.println("[");
+      Serial.println(s);
+      Serial.println("]");
+      delay(5000);
+
+      altiReadingsIndex = 0;
+      emulatorLoopIndex = 0;
+      emulatorAltitude = 4600;
+      flashStrip(orange, 1, 1000);
     }
   }
 }
@@ -170,8 +223,8 @@ double getBaseline() {
   return bs;
 }
 
-void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration) {
-  if (offDuration == 0) {
+void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, int finalDelay) {
+  if (offDuration == -1) {
     offDuration = onDuration;
   };
   for (int i = 0; i < numTimes; i++) {
@@ -179,6 +232,9 @@ void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration) {
     delay(onDuration);
     turnLightsOff();
     delay(offDuration);
+  }
+  if (finalDelay > 0) {
+    delay(finalDelay);
   }
 }
 
