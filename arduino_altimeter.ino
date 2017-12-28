@@ -7,6 +7,12 @@
 #include "FS.h"
 #include <SPIFFS.h>
 
+//wifi includes
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+
 Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
 int aboveCheck = 0;
@@ -18,6 +24,11 @@ double baseline, alti;
 int checkAlti = 300; // we passed 300, signal
 int breakAlti = 1550; // breakoff, signal
 int openAlti = 1000; // we are open, stop signaling
+WebServer server(80);
+
+const char* ssid = "";
+const char* password = "";
+const char* host = "";
 
 //color correction
 extern const uint8_t gamma8[];
@@ -63,6 +74,12 @@ void setup()
     while (1);
   }
   SPIFFS.begin();
+  WiFi.softAP(ssid, password);
+ 
+  Serial.println();
+  Serial.print("IP address: ");
+  Serial.println(WiFi.softAPIP());
+  httpServer();
 
   //print Log
 //  File f = SPIFFS.open("/log.txt", "r");
@@ -86,6 +103,7 @@ void setup()
 
 void loop() {
   unsigned long currentMillis = millis();
+  server.handleClient();
 
   if (currentMillis - previousMillis >= interval) {
     // save the last time you blinked the LED
