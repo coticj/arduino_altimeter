@@ -7,7 +7,8 @@
 #include <Wire.h>
 #include <SPIFFS.h>
 
-#include <Adafruit_BMP085.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP280.h>
 
 #include <Adafruit_NeoPixel.h>
 
@@ -32,7 +33,7 @@ uint32_t orange = strip.Color(pgm_read_byte(&gamma8[255]), pgm_read_byte(&gamma8
 
 
 WebServer server(80);
-Adafruit_BMP085 bmp;
+Adafruit_BMP280 bmp;
 
 //initialize color correction
 extern const uint8_t gamma8[];
@@ -45,9 +46,9 @@ const long interval = 1000;           // interval at which to blink (millisecond
 
 #define DBG_OUTPUT_PORT Serial
 
-const char* ssid = "";
-const char* password = "";
-const char* host = "alti";
+const char* ssid = "alti-jure";
+const char* password = "jurejure";
+const char* host = "alti-jure";
 
 void setup()
 {
@@ -55,20 +56,11 @@ void setup()
   DBG_OUTPUT_PORT.print("\n");
   DBG_OUTPUT_PORT.setDebugOutput(true);
  
-   //WIFI INIT
-  DBG_OUTPUT_PORT.printf("Connecting to %s\n", ssid);
-  if (String(WiFi.SSID()) != String(ssid)) {
-    WiFi.begin(ssid, password);
-  }
-  
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    DBG_OUTPUT_PORT.print(".");
-  }
-  DBG_OUTPUT_PORT.println("");
-  DBG_OUTPUT_PORT.print("Connected! IP address: ");
-  DBG_OUTPUT_PORT.println(WiFi.localIP());
-
+  WiFi.softAP(ssid, password);
+ 
+  Serial.println();
+  Serial.print("IP address: ");
+  Serial.println(WiFi.softAPIP());
   
   bmp.begin();
   httpServer();
