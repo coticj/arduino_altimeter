@@ -16,6 +16,17 @@ float getBatteryPercentage()
   return _min(map(getBatteryVoltage() * 10, 3.35 * 10, 4.5 * 10, 0, 100), 100); // Calculate Battery Level (Percent)
 }
 
+float getTemperature()
+{
+ return bmp.readTemperature();
+}
+
+float getPressure()
+{
+ return bmp.readPressure();
+}
+
+
 // led color correction
 const uint8_t PROGMEM gamma8[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,

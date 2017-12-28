@@ -85,7 +85,7 @@ String getContentType(String filename){
 
 // webserver
 bool handleFileRead(String path){
-  DBG_OUTPUT_PORT.println("handleFileRead: " + path);
+  Serial.println("handleFileRead: " + path);
   if(path.endsWith("/")) path += "index.html";
   String contentType = getContentType(path);
   String pathWithGz = path + ".gz";
