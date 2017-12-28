@@ -19,6 +19,9 @@ int checkAlti = 300; // we passed 300, signal
 int breakAlti = 1550; // breakoff, signal
 int openAlti = 1000; // we are open, stop signaling
 
+//color correction
+extern const uint8_t gamma8[];
+
 //colors
 uint32_t red = strip.Color(255, 0, 0);
 uint32_t green = strip.Color(0, 255, 0);
@@ -26,6 +29,7 @@ uint32_t blue = strip.Color(0, 0, 255);
 uint32_t yellow = strip.Color(255, 255, 0);
 uint32_t orange = strip.Color(255, 127, 0);
 uint32_t white = strip.Color(127, 127, 127);
+uint32_t realOrange = strip.Color(pgm_read_byte(&gamma8[255]), pgm_read_byte(&gamma8[165]), pgm_read_byte(&gamma8[0]));
 
 // Generally, you should use "unsigned long" for variables that hold time
 // The value will quickly become too large for an int to store
