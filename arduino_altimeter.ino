@@ -76,7 +76,7 @@ void loop() {
     Serial.print(alti); //
     Serial.print(" m | logIndex: ");
     Serial.print(logIndex);
-    Serial.print(" | baseline: ");
+    Serial.print(" | pressure: ");
     Serial.print(baseline * 100);
     Serial.print(" Pa | temp: ");
     Serial.print(bmp.readTemperature());
