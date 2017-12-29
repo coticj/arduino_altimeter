@@ -57,7 +57,7 @@ void setup()
   // printLog();
 
   baseline = getBaseline();
-  Serial.println(baseline);
+//  Serial.println(baseline);
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   flashStrip(blue, 2, 500, 200, 500); // Signal OK
