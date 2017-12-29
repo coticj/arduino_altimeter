@@ -54,13 +54,14 @@ void setup()
   }
   SPIFFS.begin();
 
-  //printLog();
+  // printLog();
 
   baseline = getBaseline();
   Serial.println(baseline);
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
-  flashStrip(green, 2, 500, 200); // Signal OK
+  flashStrip(blue, 2, 500, 200, 500); // Signal OK
+  signalBatteryPercentage();
 }
 
 void loop() {
@@ -76,43 +77,9 @@ void loop() {
     Serial.print(" m | logIndex: ");
     Serial.print(logIndex);
     Serial.print(" | baseline: ");
-    Serial.println(baseline);
-
-    //    if (alti > 10) {
-    //      Serial.print(millis());
-    //      Serial.println(" ms");
-    //    }
-
-    //    if (!emulate) {
-    //    if (alti > checkAlti && aboveCheck == 0) {
-    //      aboveCheck = 1;
-    //      flashStrip(blue, 3, 200); //we passed 300m, flash
-    //    }
-    //
-    //    if (alti > openAlti && aboveOpen == 0) {
-    //      aboveOpen = 1;
-    //      flashStrip(white, 2, 200); //we passed 300m, flash
-    //    }
-    //
-    //    if (alti > breakAlti && aboveBreak == 0) {
-    //      aboveBreak = 1;
-    //      flashStrip(white, 2, 500); //we passed breakoff altitude, flash
-    //    }
-    //
-    //    if (alti < breakAlti && aboveBreak == 1) {
-    //      flashStrip(red, 10, 200);
-    //      aboveBreak = 0;
-    //    }
-    //
-    //    if (alti < openAlti && aboveOpen == 1) {
-    //      flashStrip(red, 10, 200);
-    //      aboveOpen = 0;
-    //    }
-    //
-    //    if (alti < checkAlti && aboveCheck == 1) {
-    //      aboveCheck = 0;
-    //    }
-    //    }
+    Serial.print(baseline);
+    Serial.print(" | temp: ");
+    Serial.println(bmp.readTemperature());
 
     altiLog[logIndex] = alti;
     timeLog[logIndex] = millis();
@@ -138,7 +105,7 @@ void loop() {
 
     // če še ni prosti pad, vpisuje samo zadnjih 10 meritev
     if (logIndex == 10 &&
-        (altiLog[logIndex - 10] - altiLog[logIndex]) < 70) {
+        (altiLog[logIndex - 10] - altiLog[logIndex]) < 50) {
       int i = 0;
       for (i; i < 10; i++) {
         altiLog[i] = altiLog[i + 1];
@@ -165,8 +132,6 @@ void loop() {
 
       logIndex = 0;
       interval = intervalGround;
-      //      emulatorLoopIndex = 0;
-      //      emulatorAltitude = 4600;
       flashStrip(orange, 1, 1000);
     }
   }
@@ -281,5 +246,42 @@ void turnLightsOff() {
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, strip.Color(0, 0, 0));
     strip.show();
+  }
+}
+
+float getBatteryVoltage()
+{
+  float measuredvbat = analogRead(A13);
+//  Serial.print(measuredvbat);
+//  Serial.print(" = ");
+
+  measuredvbat *= 2;    // we divided by 2, so multiply back
+  //measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+  measuredvbat /= 1024; // convert to voltage
+
+  return measuredvbat;
+}
+
+float getBatteryPercentage()
+{
+  return _min(map(getBatteryVoltage() * 10, 3.35 * 10, 4.5 * 10, 0, 100), 100); // Calculate Battery Level (Percent)
+}
+
+void signalBatteryPercentage() {
+  float batt = getBatteryPercentage();
+  if (batt < 20) {
+    flashStrip(red, 1, 500, 0); // no bars
+  }
+  else if (batt < 40) {
+    flashStrip(red, 1, 500, 200); // one bar
+  }
+  else if (batt < 60) {
+    flashStrip(green, 2, 500, 200); // two bars
+  }
+  else if (batt < 80) {
+    flashStrip(green, 3, 500, 200); // three bars
+  }
+  else {
+    flashStrip(green, 4, 500, 200); // four bars
   }
 }
