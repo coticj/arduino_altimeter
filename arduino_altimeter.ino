@@ -79,7 +79,12 @@ void loop() {
     Serial.print(" | baseline: ");
     Serial.print(baseline);
     Serial.print(" | temp: ");
-    Serial.println(bmp.readTemperature());
+    Serial.print(bmp.readTemperature());
+    Serial.print(" | batt: ");
+    Serial.print(getBatteryVoltage());
+    Serial.print("V; ");
+    Serial.print(getBatteryPercentage());
+    Serial.println("%");
 
     altiLog[logIndex] = alti;
     timeLog[logIndex] = millis();
@@ -252,8 +257,8 @@ void turnLightsOff() {
 float getBatteryVoltage()
 {
   float measuredvbat = analogRead(A13);
-//  Serial.print(measuredvbat);
-//  Serial.print(" = ");
+  //  Serial.print(measuredvbat);
+  //  Serial.print(" = ");
 
   measuredvbat *= 2;    // we divided by 2, so multiply back
   //measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
