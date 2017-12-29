@@ -7,6 +7,12 @@
 #include "FS.h"
 #include <SPIFFS.h>
 
+//wifi includes
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+
 Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
 int aboveCheck = 0;
@@ -18,6 +24,14 @@ double baseline, alti;
 int checkAlti = 300; // we passed 300, signal
 int breakAlti = 1550; // breakoff, signal
 int openAlti = 1000; // we are open, stop signaling
+WebServer server(80);
+
+const char* ssid = "";
+const char* password = "";
+const char* host = "";
+
+//color correction
+extern const uint8_t gamma8[];
 
 //colors
 uint32_t red = strip.Color(255, 0, 0);
@@ -26,23 +40,24 @@ uint32_t blue = strip.Color(0, 0, 255);
 uint32_t yellow = strip.Color(255, 255, 0);
 uint32_t orange = strip.Color(255, 127, 0);
 uint32_t white = strip.Color(127, 127, 127);
+uint32_t realOrange = strip.Color(pgm_read_byte(&gamma8[255]), pgm_read_byte(&gamma8[165]), pgm_read_byte(&gamma8[0]));
 
 // Generally, you should use "unsigned long" for variables that hold time
 // The value will quickly become too large for an int to store
 unsigned long previousMillis = 0;        // will store last time LED was updated
 
 // constants won't change:
-const long interval = 500;           // interval at which to measure (milliseconds)
+const long intervalGround = 5000;           // interval at which to measure (milliseconds)
+const long intervalOffGround = 500;           // interval at which to measure (milliseconds)
 
-bool emulate = true;
-
-int emulatorAltitude = 4600;
+long interval = intervalGround;
 
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 0, int finalDelay = -1);
 
-double altiReadings[1200]; //10 min odčitkov na pol sekunde
-int altiReadingsIndex = 0;
-int emulatorLoopIndex = 0;
+double altiLog[1200]; //10 min odčitkov na pol sekunde
+unsigned long timeLog[1200]; //10 min odčitkov na pol sekunde
+double baselineHistory[10];
+int logIndex = 0;
 
 void setup()
 {
@@ -53,6 +68,14 @@ void setup()
     while (1);
   }
   SPIFFS.begin();
+  WiFi.softAP(ssid, password);
+ 
+  Serial.println();
+  Serial.print("IP address: ");
+  Serial.println(WiFi.softAPIP());
+  httpServer();
+
+  //printLog();
 
   baseline = getBaseline();
   Serial.println(baseline);
@@ -63,164 +86,195 @@ void setup()
 
 void loop() {
   unsigned long currentMillis = millis();
+  server.handleClient();
 
   if (currentMillis - previousMillis >= interval) {
     // save the last time you blinked the LED
     previousMillis = currentMillis;
 
     alti = getAltitude();
-    Serial.print(F("Curr alt = "));
+    Serial.print(F("Altitude: "));
     Serial.print(alti); //
-    Serial.print(" m (");
-    Serial.print(altiReadingsIndex);
-    Serial.println(")");
-    Serial.println();
+    Serial.print(" m | logIndex: ");
+    Serial.print(logIndex);
+    Serial.print(" | baseline: ");
+    Serial.println(baseline);
 
-    if (alti > 10) {
-      Serial.print(millis());
-      Serial.println(" ms");
+    //    if (alti > 10) {
+    //      Serial.print(millis());
+    //      Serial.println(" ms");
+    //    }
+
+    //    if (!emulate) {
+    //    if (alti > checkAlti && aboveCheck == 0) {
+    //      aboveCheck = 1;
+    //      flashStrip(blue, 3, 200); //we passed 300m, flash
+    //    }
+    //
+    //    if (alti > openAlti && aboveOpen == 0) {
+    //      aboveOpen = 1;
+    //      flashStrip(white, 2, 200); //we passed 300m, flash
+    //    }
+    //
+    //    if (alti > breakAlti && aboveBreak == 0) {
+    //      aboveBreak = 1;
+    //      flashStrip(white, 2, 500); //we passed breakoff altitude, flash
+    //    }
+    //
+    //    if (alti < breakAlti && aboveBreak == 1) {
+    //      flashStrip(red, 10, 200);
+    //      aboveBreak = 0;
+    //    }
+    //
+    //    if (alti < openAlti && aboveOpen == 1) {
+    //      flashStrip(red, 10, 200);
+    //      aboveOpen = 0;
+    //    }
+    //
+    //    if (alti < checkAlti && aboveCheck == 1) {
+    //      aboveCheck = 0;
+    //    }
+    //    }
+
+    altiLog[logIndex] = alti;
+    timeLog[logIndex] = millis();
+
+    // zapisuje samo zadnjih 10 meritev
+    int i;
+    if (logIndex < 10) {
+      baselineHistory[logIndex] = getBaseline();
+    }
+    else {
+      for (i; i < 10; i++) {
+        baselineHistory[i] = baselineHistory[i + 1];
+      }
+      baselineHistory[9] = getBaseline();
     }
 
-    if (!emulate) {
-      if (alti > checkAlti && aboveCheck == 0) {
-        aboveCheck = 1;
-        flashStrip(blue, 3, 200); //we passed 300m, flash
-      }
-
-      if (alti > openAlti && aboveOpen == 0) {
-        aboveOpen = 1;
-        flashStrip(white, 2, 200); //we passed 300m, flash
-      }
-
-      if (alti > breakAlti && aboveBreak == 0) {
-        aboveBreak = 1;
-        flashStrip(white, 2, 500); //we passed breakoff altitude, flash
-      }
-
-      if (alti < breakAlti && aboveBreak == 1) {
-        flashStrip(red, 10, 200);
-        aboveBreak = 0;
-      }
-
-      if (alti < openAlti && aboveOpen == 1) {
-        flashStrip(red, 10, 200);
-        aboveOpen = 0;
-      }
-
-      if (alti < checkAlti && aboveCheck == 1) {
-        aboveCheck = 0;
-      }
+    // če je na tleh popravi nulo
+    if (interval == intervalGround &&
+        logIndex >= 10 &&
+        !altiChange(10)) {
+      baseline = baselineHistory[0];
     }
 
-    // modra za 1000 m, oranžna za 500 m
-    if (int(alti) % 500 == 0 && alti > 0) {
-      flashStrip(red, 1, 100, 300); // kratek rdeč za pozornost?
-      flashStrip(blue, int(alti) / 1000, 300, 100, 300);
-      if (int(alti) % 1000 == 500) {
-        flashStrip(orange, 1, 100);
-      }
-    }
-
-    if (emulate && emulatorAltitude >= 25 && emulatorLoopIndex > 20) {
-      emulatorAltitude -= 50;
-    }
-
-    altiReadings[altiReadingsIndex] = alti;
-
-    // preveri, če še ni prosti pad
-    if (altiReadingsIndex == 10 &&
-        altiReadings[altiReadingsIndex] == altiReadings[altiReadingsIndex - 10]) {
+    // če še ni prosti pad, vpisuje samo zadnjih 10 meritev
+    if (logIndex == 10 &&
+        (altiLog[logIndex - 10] - altiLog[logIndex]) < 70) {
       int i = 0;
       for (i; i < 10; i++) {
-        altiReadings[i] = altiReadings[i + 1];
+        altiLog[i] = altiLog[i + 1];
+        timeLog[i] = timeLog[i + 1];
       }
-      altiReadingsIndex--;
+      logIndex--;
     }
 
-    altiReadingsIndex++;
-    emulatorLoopIndex++;
+    logIndex++;
 
-    // preveri, če je na tleh
-    if (altiReadingsIndex > 20 &&
-        altiReadings[altiReadingsIndex] == altiReadings[altiReadingsIndex - 10] && alti < 100) {
-      //write array to file
-      // open file for writing
-      File f = SPIFFS.open("/f.txt", "a");
-      if (!f) {
-        Serial.println("file open failed");
-      }
-      Serial.println("====== Writing to SPIFFS file =========");
-      f.print("{ \"interval\": ");
-      f.print(interval);
-      f.println(", ");
-      f.print("\"altitudes\": [ ");
-      int i = 0;
-      for (i; i <= altiReadingsIndex; i++) {
-        f.print(altiReadings[i]);
-        if (i < altiReadingsIndex) {
-          f.print(", ");
-        }
-      }
-      f.println(" ]");
-      f.println(" }, ");
+    // če je na tleh
+    if (interval == intervalGround &&
+        alti > 50 &&
+        altiChange(10)) {
+      interval = intervalOffGround;
+    }
 
-      f.close();
-      f = SPIFFS.open("/f.txt", "r");
+    // nazaj na tleh
+    if (interval == intervalOffGround &&
+        logIndex > 60 &&
+        alti < 100 &&
+        !altiChange(60)) {
+      saveLog(30);
 
-      String s;
-      while (f.available()) {
-        s += char(f.read());
-      }
-      f.close();
-      int s_end = s.lastIndexOf(",");
-      s.remove(s_end);
-      Serial.println("[");
-      Serial.println(s);
-      Serial.println("]");
-      delay(5000);
-
-      altiReadingsIndex = 0;
-      emulatorLoopIndex = 0;
-      emulatorAltitude = 4600;
+      logIndex = 0;
+      interval = intervalGround;
+      //      emulatorLoopIndex = 0;
+      //      emulatorAltitude = 4600;
       flashStrip(orange, 1, 1000);
     }
   }
 }
 
-double getAltitude() {
-  if (emulate) {
-    return emulatorAltitude;
+bool altiChange(int offset) {
+  double delta = altiLog[logIndex] - altiLog[logIndex - offset];
+  return (delta < -2 || delta > 2);
+}
+
+void saveLog(int ignoreLastEntries) {
+  //write array to file
+  // open file for writing
+  File f = SPIFFS.open("/log.txt", "a");
+  if (!f) {
+    Serial.println("file open failed");
   }
   else {
-    return bmp.readAltitude(baseline);
+    Serial.println("====== Writing to SPIFFS file =========");
+    f.print("{ \"readings\": [ ");
+    int i = 0;
+    for (i; i <= logIndex - ignoreLastEntries; i++) {
+      f.print("{\"time\": ");
+      f.print(timeLog[i]);
+      f.print(", ");
+      f.print("\"altitude\": ");
+      f.print(altiLog[i]);
+      f.print("}");
+      if (i < logIndex - ignoreLastEntries) {
+        f.print(",");
+      }
+    }
+    f.println(" ]");
+    f.println(" }, ");
+  }
+
+  f.close();
+}
+
+void printLog() {
+  File f = SPIFFS.open("/log.txt", "r");
+  if (!f) {
+    Serial.println("file open failed");
+  }
+  else {
+    String s;
+    while (f.available()) {
+      s += char(f.read());
+    }
+    f.close();
+    int s_end = s.lastIndexOf(",");
+    s.remove(s_end);
+    Serial.println("[");
+    Serial.println(s);
+    Serial.println("]");
   }
 }
 
-// set a reference pressure, smooth it and use this as 0m
+double getAltitude() {
+  return bmp.readAltitude(baseline);
+}
+
 double getBaseline() {
-  double bs;
-  int numReadings = 10;
+  return bmp.readPressure() / 100;
 
-  double readings[numReadings];
-  int readIndex = 0;
-  double total = 0;
-  double average = 0;
-
-  for (readIndex; readIndex < numReadings; readIndex++) {
-    readings[readIndex] = 0;
-  }
-
-  readIndex = 0;
-  //make 10 measurments and then return the average pressure
-  for (readIndex; readIndex < numReadings; readIndex++) {
-    readings[readIndex] = bmp.readPressure();
-    total = total + readings[readIndex];
-    delay(100);
-  }
-  average = total / numReadings;
-  bs = average / 100;
-
-  return bs;
+  // set a reference pressure, smooth it and use this as 0m
+  //  int numReadings = 5;
+  //
+  //  double readings[numReadings];
+  //  int i = 0;
+  //  double total = 0;
+  //  double average = 0;
+  //
+  //  for (i; i < numReadings; i++) {
+  //    readings[i] = 0;
+  //  }
+  //
+  //  i = 0;
+  //  for (i; i < numReadings; i++) {
+  //    readings[i] = getPreasure();
+  //    total = total + readings[i];
+  //    delay(100);
+  //  }
+  //  average = total / numReadings;
+  //
+  //  return average;
 }
 
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, int finalDelay) {
