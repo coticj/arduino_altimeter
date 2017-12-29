@@ -78,13 +78,13 @@ void loop() {
     Serial.print(logIndex);
     Serial.print(" | baseline: ");
     Serial.print(baseline);
-    Serial.print(" | temp: ");
+    Serial.print(" Pa | temp: ");
     Serial.print(bmp.readTemperature());
-    Serial.print(" | batt: ");
+    Serial.print(" °C | batt: ");
     Serial.print(getBatteryVoltage());
-    Serial.print("V; ");
+    Serial.print(" V; ");
     Serial.print(getBatteryPercentage());
-    Serial.println("%");
+    Serial.println(" %");
 
     altiLog[logIndex] = alti;
     timeLog[logIndex] = millis();
