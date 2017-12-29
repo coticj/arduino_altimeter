@@ -72,7 +72,7 @@ void loop() {
     previousMillis = currentMillis;
 
     alti = getAltitude();
-    Serial.print(F("Altitude: "));
+    Serial.print(F("altitude: "));
     Serial.print(alti); //
     Serial.print(" m | logIndex: ");
     Serial.print(logIndex);
