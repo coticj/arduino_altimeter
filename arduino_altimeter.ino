@@ -46,7 +46,7 @@ int logIndex = 0;
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   if (!bmp.begin()) {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
@@ -54,7 +54,7 @@ void setup()
   }
   SPIFFS.begin();
 
-  // printLog();
+  printLog();
 
   baseline = getBaseline();
 //  Serial.println(baseline);
