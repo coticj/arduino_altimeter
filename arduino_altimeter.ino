@@ -40,6 +40,7 @@ const long intervalBatteryState = 300;
 long interval = intervalGround;
 
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 0, int finalDelay = -1);
+void flashBuiltinLed(int numTimes, int onDuration, int offDuration = 0, int finalDelay = -1);
 
 double altiLog[1200]; //10 min odčitkov na pol sekunde
 unsigned long timeLog[1200]; //10 min odčitkov na pol sekunde
@@ -56,7 +57,7 @@ void setup()
   }
   SPIFFS.begin();
 
-  //printLog();
+  printLog();
   pinMode(ledPin, OUTPUT); //set builtin led
   baseline = getBaseline();
 //  Serial.println(baseline);
@@ -292,18 +293,18 @@ float getBatteryPercentage()
 void signalBatteryPercentage() {
   float batt = getBatteryPercentage();
   if (batt < 20) {
-    flashBuiltinLed(5, 100, 0, 0); // no bars
+    flashBuiltinLed(1, 2000); // no bars
   }
   else if (batt < 40) {
-    flashBuiltinLed(1, 500, 200, 0); // one bar
+    flashBuiltinLed(1, 500, 0); // one bar
   }
   else if (batt < 60) {
-    flashBuiltinLed(2, 500, 200, 0); // two bars
+    flashBuiltinLed(2, 500, 200); // two bars
   }
   else if (batt < 80) {
-    flashBuiltinLed(3, 500, 200, 0); // three bars
+    flashBuiltinLed(3, 500, 200); // three bars
   }
   else {
-    flashBuiltinLed(4, 500, 200, 0); // four bars
+    flashBuiltinLed(4, 500, 200); // four bars
   }
 }
