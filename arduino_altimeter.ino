@@ -13,6 +13,7 @@ int aboveCheck = 0;
 int aboveBreak = 0;
 int aboveOpen = 0;
 double baseline, alti;
+const int ledPin =  LED_BUILTIN;
 
 //settings
 int checkAlti = 300; // we passed 300, signal
@@ -34,6 +35,7 @@ unsigned long previousMillis = 0;        // will store last time LED was updated
 // constants won't change:
 const long intervalGround = 5000;           // interval at which to measure (milliseconds)
 const long intervalOffGround = 500;           // interval at which to measure (milliseconds)
+const long intervalBatteryState = 300;
 
 long interval = intervalGround;
 
@@ -54,8 +56,8 @@ void setup()
   }
   SPIFFS.begin();
 
-  printLog();
-
+  //printLog();
+  pinMode(ledPin, OUTPUT); //set builtin led
   baseline = getBaseline();
 //  Serial.println(baseline);
   strip.begin();
@@ -240,6 +242,21 @@ void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, i
   }
 }
 
+void flashBuiltinLed(int numTimes, int onDuration, int offDuration, int finalDelay) {
+  if (offDuration == -1) {
+    offDuration = onDuration;
+  };
+  for (int i = 0; i < numTimes; i++) {
+    digitalWrite(ledPin, HIGH);
+    delay(onDuration);
+    digitalWrite(ledPin, LOW);
+    delay(offDuration);
+  }
+  if (finalDelay > 0) {
+    delay(finalDelay);
+  }
+}
+
 void fullColor(uint32_t c) {
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
@@ -275,18 +292,18 @@ float getBatteryPercentage()
 void signalBatteryPercentage() {
   float batt = getBatteryPercentage();
   if (batt < 20) {
-    flashStrip(red, 1, 500, 0); // no bars
+    flashBuiltinLed(5, 100, 0, 0); // no bars
   }
   else if (batt < 40) {
-    flashStrip(red, 1, 500, 200); // one bar
+    flashBuiltinLed(1, 500, 200, 0); // one bar
   }
   else if (batt < 60) {
-    flashStrip(green, 2, 500, 200); // two bars
+    flashBuiltinLed(2, 500, 200, 0); // two bars
   }
   else if (batt < 80) {
-    flashStrip(green, 3, 500, 200); // three bars
+    flashBuiltinLed(3, 500, 200, 0); // three bars
   }
   else {
-    flashStrip(green, 4, 500, 200); // four bars
+    flashBuiltinLed(4, 500, 200, 0); // four bars
   }
 }
