@@ -33,7 +33,7 @@ uint32_t white = strip.Color(127, 127, 127);
 unsigned long previousMillis = 0;        // will store last time LED was updated
 
 // constants won't change:
-const long intervalGround = 5000;           // interval at which to measure (milliseconds)
+const long intervalGround = 1000;           // interval at which to measure (milliseconds)
 const long intervalOffGround = 500;           // interval at which to measure (milliseconds)
 const long intervalBatteryState = 300;
 
@@ -43,28 +43,62 @@ void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration = 0, int finalDelay = -1);
 
 double altiLog[1200]; //10 min odčitkov na pol sekunde
+
 unsigned long timeLog[1200]; //10 min odčitkov na pol sekunde
-double baselineHistory[10];
-int logIndex = 0;
+RTC_DATA_ATTR double baselineHistory[10];
+RTC_DATA_ATTR int logIndex = 0;
+
+RTC_DATA_ATTR bool firstBoot = true;
+
+#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP  5        /* Time ESP32 will go to sleep (in seconds) */
 
 void setup()
 {
   Serial.begin(115200);
-
+  Serial.println("");
+  Serial.println("boot");
   if (!bmp.begin()) {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
     while (1);
   }
-  SPIFFS.begin();
 
-  printLog();
-  pinMode(ledPin, OUTPUT); //set builtin led
-  baseline = getBaseline();
-//  Serial.println(baseline);
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
-  flashStrip(blue, 2, 500, 200, 500); // Signal OK
-  signalBatteryPercentage();
+  int i;
+  if (logIndex < 10) {
+    baselineHistory[logIndex] = getBaseline();
+  }
+  else {
+    for (i; i < 10; i++) {
+      baselineHistory[i] = baselineHistory[i + 1];
+    }
+    baselineHistory[9] = getBaseline();
+  }
+
+  if (logIndex >= 10 &&
+      !baselineAltiChange(10)) {
+    baseline = baselineHistory[0];
+    Serial.println("reset setup");
+    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+    esp_deep_sleep_start();
+  } else if (!firstBoot) {
+    SPIFFS.begin();
+    strip.begin();
+    strip.show(); // Initialize all pixels to 'off'
+  }
+
+  if (firstBoot) {
+    baseline = getBaseline();
+    //Serial.println(baseline);
+    flashStrip(blue, 2, 500, 200, 500); // Signal OK
+    signalBatteryPercentage();
+    //printLog();
+    SPIFFS.begin();
+    strip.begin();
+    strip.show(); // Initialize all pixels to 'off'
+  }
+
+  firstBoot = false;
+
 }
 
 void loop() {
@@ -109,6 +143,9 @@ void loop() {
         logIndex >= 10 &&
         !altiChange(10)) {
       baseline = baselineHistory[0];
+      Serial.println("reset loop");
+      esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+      esp_deep_sleep_start();
     }
 
     // če še ni prosti pad, vpisuje samo zadnjih 10 meritev
@@ -147,6 +184,11 @@ void loop() {
 
 bool altiChange(int offset) {
   double delta = altiLog[logIndex] - altiLog[logIndex - offset];
+  return (delta < -2 || delta > 2);
+}
+
+bool baselineAltiChange(int offset) { //zato da ohranimo podatke čez deep sleep
+  double delta = bmp.readAltitude(baselineHistory[logIndex - 1]) - bmp.readAltitude(baselineHistory[logIndex - offset]);
   return (delta < -2 || delta > 2);
 }
 
@@ -291,6 +333,7 @@ float getBatteryPercentage()
 }
 
 void signalBatteryPercentage() {
+  pinMode(ledPin, OUTPUT); //set builtin led
   float batt = getBatteryPercentage();
   if (batt < 20) {
     flashBuiltinLed(1, 2000); // no bars
@@ -308,3 +351,5 @@ void signalBatteryPercentage() {
     flashBuiltinLed(4, 500, 200); // four bars
   }
 }
+
+
