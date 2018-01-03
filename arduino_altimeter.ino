@@ -316,20 +316,16 @@ void turnLightsOff() {
 
 float getBatteryVoltage()
 {
-  float measuredvbat = analogRead(A13);
-  //  Serial.print(measuredvbat);
-  //  Serial.print(" = ");
-
-  measuredvbat *= 2;    // we divided by 2, so multiply back
-  //measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
-  measuredvbat /= 1024; // convert to voltage
-
+  float measurement = analogRead(A13);
+  
+  measuredvbat = (measurment/4095)*2*3.3*1.1;
+  
   return measuredvbat;
 }
 
 float getBatteryPercentage()
 {
-  return _min(map(getBatteryVoltage() * 10, 3.35 * 10, 4.5 * 10, 0, 100), 100); // Calculate Battery Level (Percent)
+  return _min(map(getBatteryVoltage() * 10, 3.30 * 10, 4.2 * 10, 0, 100), 100); // Calculate Battery Level (Percent)
 }
 
 void signalBatteryPercentage() {
