@@ -15,11 +15,6 @@ int aboveOpen = 0;
 double baseline, alti;
 const int ledPin =  LED_BUILTIN;
 
-//settings
-int checkAlti = 300; // we passed 300, signal
-int breakAlti = 1550; // breakoff, signal
-int openAlti = 1000; // we are open, stop signaling
-
 //colors
 uint32_t red = strip.Color(255, 0, 0);
 uint32_t green = strip.Color(0, 255, 0);
@@ -27,37 +22,35 @@ uint32_t blue = strip.Color(0, 0, 255);
 uint32_t yellow = strip.Color(255, 255, 0);
 uint32_t orange = strip.Color(255, 127, 0);
 uint32_t white = strip.Color(127, 127, 127);
+uint32_t off = strip.Color(0, 0, 0);
 
 // Generally, you should use "unsigned long" for variables that hold time
 // The value will quickly become too large for an int to store
 unsigned long previousMillis = 0;        // will store last time LED was updated
 
 // constants won't change:
-const long intervalGround = 1000;           // interval at which to measure (milliseconds)
+const long intervalGround = 10000;           // interval at which to measure (milliseconds)
 const long intervalOffGround = 500;           // interval at which to measure (milliseconds)
-const long intervalBatteryState = 300;
 
 long interval = intervalGround;
 
-void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 0, int finalDelay = -1);
-void flashBuiltinLed(int numTimes, int onDuration, int offDuration = 0, int finalDelay = -1);
+void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
+void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 
 double altiLog[1200]; //10 min odčitkov na pol sekunde
 
 unsigned long timeLog[1200]; //10 min odčitkov na pol sekunde
 RTC_DATA_ATTR double baselineHistory[10];
 RTC_DATA_ATTR int logIndex = 0;
-
 RTC_DATA_ATTR bool firstBoot = true;
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  5        /* Time ESP32 will go to sleep (in seconds) */
+#define TIME_TO_SLEEP  10        /* Time ESP32 will go to sleep (in seconds) */
 
 void setup()
 {
   Serial.begin(115200);
   Serial.println("");
-  Serial.println("boot");
   if (!bmp.begin()) {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
     while (1);
@@ -77,35 +70,61 @@ void setup()
   if (logIndex >= 10 &&
       !baselineAltiChange(10)) {
     baseline = baselineHistory[0];
-    Serial.println("reset setup");
-    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+    esp_sleep_enable_timer_wakeup(intervalGround);
     esp_deep_sleep_start();
-  } else if (!firstBoot) {
+  }
+  else if (!firstBoot) {
     SPIFFS.begin();
     strip.begin();
-    strip.show(); // Initialize all pixels to 'off'
+    setStrip(off); // Initialize all pixels to 'off'
   }
 
   if (firstBoot) {
+
+    strip.begin();
+    setStrip(off); // Initialize all pixels to 'off'
+
+    SPIFFS.begin();
+
+    int resetCount = 1;
+    if (SPIFFS.exists("/reset")) {
+      File f = SPIFFS.open("/reset", "r");
+      String s;
+      while (f.available()) {
+        s += char(f.read());
+      }
+      f.close();
+      resetCount += s.toInt();
+    }
+
+    Serial.print("reset count: ");
+    Serial.println(resetCount);
+
+    if (resetCount == 4) {
+      flashStrip(green, 1, 1000, 0);
+      printLog();
+    }
+    else {
+      File f = SPIFFS.open("/reset", "w");
+      f.print(resetCount);
+      f.close();
+      flashStrip(orange, 1, 2000, 0); // čaka. če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše
+    }
+    SPIFFS.remove("/reset");
+
     baseline = getBaseline();
-    //Serial.println(baseline);
+    flashStrip(off, 200, 0);
     flashStrip(blue, 2, 500, 200, 500); // Signal OK
     signalBatteryPercentage();
-    //printLog();
-    SPIFFS.begin();
-    strip.begin();
-    strip.show(); // Initialize all pixels to 'off'
   }
 
   firstBoot = false;
-
 }
 
 void loop() {
   unsigned long currentMillis = millis();
 
   if (currentMillis - previousMillis >= interval) {
-    // save the last time you blinked the LED
     previousMillis = currentMillis;
 
     alti = getAltitude();
@@ -156,10 +175,10 @@ void loop() {
         altiLog[i] = altiLog[i + 1];
         timeLog[i] = timeLog[i + 1];
       }
-      logIndex--;
+      --logIndex;
     }
 
-    logIndex++;
+    ++logIndex;
 
     // če je na tleh
     if (interval == intervalGround &&
@@ -246,28 +265,6 @@ double getAltitude() {
 
 double getBaseline() {
   return bmp.readPressure() / 100;
-
-  // set a reference pressure, smooth it and use this as 0m
-  //  int numReadings = 5;
-  //
-  //  double readings[numReadings];
-  //  int i = 0;
-  //  double total = 0;
-  //  double average = 0;
-  //
-  //  for (i; i < numReadings; i++) {
-  //    readings[i] = 0;
-  //  }
-  //
-  //  i = 0;
-  //  for (i; i < numReadings; i++) {
-  //    readings[i] = getPreasure();
-  //    total = total + readings[i];
-  //    delay(100);
-  //  }
-  //  average = total / numReadings;
-  //
-  //  return average;
 }
 
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, int finalDelay) {
@@ -275,9 +272,9 @@ void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, i
     offDuration = onDuration;
   };
   for (int i = 0; i < numTimes; i++) {
-    fullColor(color);
+    setStrip(color);
     delay(onDuration);
-    turnLightsOff();
+    setStrip(off);
     delay(offDuration);
   }
   if (finalDelay > 0) {
@@ -300,16 +297,9 @@ void flashBuiltinLed(int numTimes, int onDuration, int offDuration, int finalDel
   }
 }
 
-void fullColor(uint32_t c) {
+void setStrip(uint32_t c) {
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
-    strip.show();
-  }
-}
-
-void turnLightsOff() {
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, strip.Color(0, 0, 0));
     strip.show();
   }
 }
@@ -317,9 +307,9 @@ void turnLightsOff() {
 float getBatteryVoltage()
 {
   float measurement = analogRead(A13);
-  
-  measuredvbat = (measurment/4095)*2*3.3*1.1;
-  
+
+  float measuredvbat = (measurement / 4095) * 2 * 3.3 * 1.1;
+
   return measuredvbat;
 }
 
