@@ -44,9 +44,6 @@ RTC_DATA_ATTR double baselineHistory[10];
 RTC_DATA_ATTR int logIndex = 0;
 RTC_DATA_ATTR bool firstBoot = true;
 
-#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  10        /* Time ESP32 will go to sleep (in seconds) */
-
 void setup()
 {
   Serial.begin(115200);
@@ -70,7 +67,7 @@ void setup()
   if (logIndex >= 10 &&
       !baselineAltiChange(10)) {
     baseline = baselineHistory[0];
-    esp_sleep_enable_timer_wakeup(intervalGround);
+    esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
     esp_deep_sleep_start();
   }
   else if (!firstBoot) {
@@ -163,7 +160,7 @@ void loop() {
         !altiChange(10)) {
       baseline = baselineHistory[0];
       Serial.println("reset loop");
-      esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+      esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
       esp_deep_sleep_start();
     }
 
