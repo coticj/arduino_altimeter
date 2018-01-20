@@ -9,9 +9,6 @@
 
 Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
-int aboveCheck = 0;
-int aboveBreak = 0;
-int aboveOpen = 0;
 double baseline, alti;
 const int ledPin =  LED_BUILTIN;
 
@@ -71,15 +68,16 @@ void setup()
     esp_deep_sleep_start();
   }
   else if (!firstBoot) {
-    SPIFFS.begin();
     strip.begin();
-    setStrip(off); // Initialize all pixels to 'off'
+    flashStrip(off, 200, 0); // Initialize all pixels to 'off'
+
+    SPIFFS.begin();
   }
 
   if (firstBoot) {
 
     strip.begin();
-    setStrip(off); // Initialize all pixels to 'off'
+    flashStrip(off, 200, 0); // Initialize all pixels to 'off'
 
     SPIFFS.begin();
 
@@ -297,8 +295,8 @@ void flashBuiltinLed(int numTimes, int onDuration, int offDuration, int finalDel
 void setStrip(uint32_t c) {
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
-    strip.show();
   }
+  strip.show();
 }
 
 float getBatteryVoltage()
