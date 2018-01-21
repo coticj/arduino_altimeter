@@ -9,7 +9,7 @@
 
 Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
-double baseline, alti;
+double alti;
 const int ledPin =  LED_BUILTIN;
 
 //colors
@@ -37,7 +37,8 @@ void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int fin
 double altiLog[1200]; //10 min odčitkov na pol sekunde
 
 unsigned long timeLog[1200]; //10 min odčitkov na pol sekunde
-RTC_DATA_ATTR double baselineHistory[10];
+RTC_DATA_ATTR double baseline;
+RTC_DATA_ATTR double pressureHistory[10];
 RTC_DATA_ATTR int logIndex = 0;
 RTC_DATA_ATTR bool firstBoot = true;
 
@@ -52,18 +53,18 @@ void setup()
 
   int i;
   if (logIndex < 10) {
-    baselineHistory[logIndex] = getBaseline();
+    pressureHistory[logIndex] = getPressure();
   }
   else {
     for (i; i < 10; i++) {
-      baselineHistory[i] = baselineHistory[i + 1];
+      pressureHistory[i] = pressureHistory[i + 1];
     }
-    baselineHistory[9] = getBaseline();
+    pressureHistory[9] = getPressure();
   }
 
   if (logIndex >= 10 &&
-      !baselineAltiChange(10)) {
-    baseline = baselineHistory[0];
+      !pressureAltiChange(10)) {
+    baseline = pressureHistory[logIndex - 10];
     esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
     esp_deep_sleep_start();
   }
@@ -107,7 +108,7 @@ void setup()
     }
     SPIFFS.remove("/reset");
 
-    baseline = getBaseline();
+    baseline = getPressure();
     flashStrip(off, 200, 0);
     flashStrip(blue, 2, 500, 200, 500); // Signal OK
     signalBatteryPercentage();
@@ -128,7 +129,7 @@ void loop() {
     Serial.print(" m | logIndex: ");
     Serial.print(logIndex);
     Serial.print(" | pressure: ");
-    Serial.print(baseline * 100);
+    Serial.print(getPressure() * 100);
     Serial.print(" Pa | temp: ");
     Serial.print(bmp.readTemperature());
     Serial.print(" °C | batt: ");
@@ -143,21 +144,20 @@ void loop() {
     // zapisuje samo zadnjih 10 meritev
     int i;
     if (logIndex < 10) {
-      baselineHistory[logIndex] = getBaseline();
+      pressureHistory[logIndex] = getPressure();
     }
     else {
       for (i; i < 10; i++) {
-        baselineHistory[i] = baselineHistory[i + 1];
+        pressureHistory[i] = pressureHistory[i + 1];
       }
-      baselineHistory[9] = getBaseline();
+      pressureHistory[9] = getPressure();
     }
 
     // če je na tleh popravi nulo
     if (interval == intervalGround &&
         logIndex >= 10 &&
         !altiChange(10)) {
-      baseline = baselineHistory[0];
-      Serial.println("reset loop");
+      baseline = pressureHistory[logIndex - 10];
       esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
       esp_deep_sleep_start();
     }
@@ -201,8 +201,8 @@ bool altiChange(int offset) {
   return (delta < -2 || delta > 2);
 }
 
-bool baselineAltiChange(int offset) { //zato da ohranimo podatke čez deep sleep
-  double delta = bmp.readAltitude(baselineHistory[logIndex - 1]) - bmp.readAltitude(baselineHistory[logIndex - offset]);
+bool pressureAltiChange(int offset) { //zato da ohranimo podatke čez deep sleep
+  double delta = bmp.readAltitude(pressureHistory[logIndex - 1]) - bmp.readAltitude(pressureHistory[logIndex - offset]);
   return (delta < -2 || delta > 2);
 }
 
@@ -258,7 +258,7 @@ double getAltitude() {
   return bmp.readAltitude(baseline);
 }
 
-double getBaseline() {
+double getPressure() {
   return bmp.readPressure() / 100;
 }
 
