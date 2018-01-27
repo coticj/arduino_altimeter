@@ -9,7 +9,6 @@
 
 Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
-double alti;
 const int ledPin =  LED_BUILTIN;
 
 //colors
@@ -34,13 +33,16 @@ long interval = intervalGround;
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 
-double altiLog[1200]; //10 min odčitkov na pol sekunde
+double altitude;
+double altitudeLog[1200]; // 10 min odčitkov na pol sekunde
+unsigned long timeLog[1200]; // 10 min odčitkov na pol sekunde
 
-unsigned long timeLog[1200]; //10 min odčitkov na pol sekunde
 RTC_DATA_ATTR double baseline;
-RTC_DATA_ATTR double pressureHistory[10];
+RTC_DATA_ATTR double pressureHistory[11];
 RTC_DATA_ATTR int logIndex = 0;
 RTC_DATA_ATTR bool firstBoot = true;
+
+#define arr_len(x) (sizeof(x) / sizeof(*x))
 
 void setup()
 {
@@ -51,29 +53,10 @@ void setup()
     while (1);
   }
 
-  int i;
-  if (logIndex < 10) {
-    pressureHistory[logIndex] = getPressure();
-  }
-  else {
-    for (i; i < 10; i++) {
-      pressureHistory[i] = pressureHistory[i + 1];
-    }
-    pressureHistory[9] = getPressure();
-  }
+  // printStatus(); // altitude je še 0.00, ker se ga še ne potrebuje
 
-  if (logIndex >= 10 &&
-      !pressureAltiChange(10)) {
-    baseline = pressureHistory[logIndex - 10];
-    esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
-    esp_deep_sleep_start();
-  }
-  else if (!firstBoot) {
-    strip.begin();
-    flashStrip(off, 200, 0); // Initialize all pixels to 'off'
-
-    SPIFFS.begin();
-  }
+  updatePressureHistory();
+  ifNoChangeOnGroundStartDeepSleep();
 
   if (firstBoot) {
 
@@ -104,14 +87,20 @@ void setup()
       File f = SPIFFS.open("/reset", "w");
       f.print(resetCount);
       f.close();
-      flashStrip(orange, 1, 2000, 0); // čaka. če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše
+      flashStrip(orange, 1, 2000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
     }
     SPIFFS.remove("/reset");
 
-    baseline = getPressure();
+    baseline = pressureHistory[logIndex];
     flashStrip(off, 200, 0);
     flashStrip(blue, 2, 500, 200, 500); // Signal OK
     signalBatteryPercentage();
+  }
+  else {
+    strip.begin();
+    flashStrip(off, 200, 0); // Initialize all pixels to 'off'
+
+    SPIFFS.begin();
   }
 
   firstBoot = false;
@@ -123,51 +112,22 @@ void loop() {
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
 
-    alti = getAltitude();
-    Serial.print(F("altitude: "));
-    Serial.print(alti); //
-    Serial.print(" m | logIndex: ");
-    Serial.print(logIndex);
-    Serial.print(" | pressure: ");
-    Serial.print(getPressure() * 100);
-    Serial.print(" Pa | temp: ");
-    Serial.print(bmp.readTemperature());
-    Serial.print(" °C | batt: ");
-    Serial.print(getBatteryVoltage());
-    Serial.print(" V; ");
-    Serial.print(getBatteryPercentage());
-    Serial.println(" %");
+    altitude = getAltitude();
 
-    altiLog[logIndex] = alti;
+    printStatus();
+
+    altitudeLog[logIndex] = altitude;
     timeLog[logIndex] = millis();
 
-    // zapisuje samo zadnjih 10 meritev
-    int i;
-    if (logIndex < 10) {
-      pressureHistory[logIndex] = getPressure();
-    }
-    else {
-      for (i; i < 10; i++) {
-        pressureHistory[i] = pressureHistory[i + 1];
-      }
-      pressureHistory[9] = getPressure();
-    }
+    updatePressureHistory();
+    ifNoChangeOnGroundStartDeepSleep();
 
-    // če je na tleh popravi nulo
-    if (interval == intervalGround &&
-        logIndex >= 10 &&
-        !altiChange(10)) {
-      baseline = pressureHistory[logIndex - 10];
-      esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
-      esp_deep_sleep_start();
-    }
-
-    // če še ni prosti pad, vpisuje samo zadnjih 10 meritev
+    // če še ni prosti pad, vpisuje samo zadnjih 11 meritev
     if (logIndex == 10 &&
-        (altiLog[logIndex - 10] - altiLog[logIndex]) < 50) {
+        (altitudeLog[logIndex - 10] - altitudeLog[logIndex]) < 50) {
       int i = 0;
       for (i; i < 10; i++) {
-        altiLog[i] = altiLog[i + 1];
+        altitudeLog[i] = altitudeLog[i + 1];
         timeLog[i] = timeLog[i + 1];
       }
       --logIndex;
@@ -175,18 +135,18 @@ void loop() {
 
     ++logIndex;
 
-    // če je na tleh
+    // če se dvigne iz tal
     if (interval == intervalGround &&
-        alti > 50 &&
-        altiChange(10)) {
+        altitude > 50 &&
+        altitudeChange(10)) {
       interval = intervalOffGround;
     }
 
-    // nazaj na tleh
+    // če je nazaj na tleh po prostem padu
     if (interval == intervalOffGround &&
         logIndex > 60 &&
-        alti < 100 &&
-        !altiChange(60)) {
+        altitude < 100 &&
+        !altitudeChange(60)) {
       saveLog(30);
 
       logIndex = 0;
@@ -196,13 +156,55 @@ void loop() {
   }
 }
 
-bool altiChange(int offset) {
-  double delta = altiLog[logIndex] - altiLog[logIndex - offset];
+void printStatus() {
+  Serial.print(F("altitude: "));
+  Serial.print(altitude);
+  Serial.print(F(" m | logIndex: "));
+  Serial.print(logIndex);
+  Serial.print(F(" | pressure: "));
+  Serial.print(getPressure() * 100);
+  Serial.print(F(" Pa | temp: "));
+  Serial.print(bmp.readTemperature());
+  Serial.print(F(" °C | batt: "));
+  Serial.print(getBatteryVoltage());
+  Serial.print(F(" V; "));
+  Serial.print(getBatteryPercentage());
+  Serial.println(F(" %"));
+}
+
+void updatePressureHistory() {
+  // zapisuje samo 11 meritev. Če zapis na indexu 10 že obstaja, premakne vse zapise za eno mesto naprej
+  if ((pressureHistory[10] == 0)) {
+    pressureHistory[logIndex] = getPressure();
+  }
+  else {
+    int i;
+    for (i; i < 10; i++) {
+      pressureHistory[i] = pressureHistory[i + 1];
+    }
+    pressureHistory[10] = getPressure();
+  }
+}
+
+void ifNoChangeOnGroundStartDeepSleep() {
+  // če je na tleh in ni spremembe v zadnjih 10 zapisih, popravi baseline
+  if (interval == intervalGround &&
+      logIndex >= 10 &&
+      !pressureAltitudeChange()) {
+    baseline = pressureHistory[logIndex - 10];
+    logIndex = 10;
+    esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
+    esp_deep_sleep_start();
+  }
+}
+
+bool altitudeChange(int offset) {
+  double delta = altitudeLog[logIndex] - altitudeLog[logIndex - offset];
   return (delta < -2 || delta > 2);
 }
 
-bool pressureAltiChange(int offset) { //zato da ohranimo podatke čez deep sleep
-  double delta = bmp.readAltitude(pressureHistory[logIndex - 1]) - bmp.readAltitude(pressureHistory[logIndex - offset]);
+bool pressureAltitudeChange() {
+  double delta = bmp.readAltitude(pressureHistory[10]) - bmp.readAltitude(pressureHistory[0]);
   return (delta < -2 || delta > 2);
 }
 
@@ -222,7 +224,7 @@ void saveLog(int ignoreLastEntries) {
       f.print(timeLog[i]);
       f.print(", ");
       f.print("\"altitude\": ");
-      f.print(altiLog[i]);
+      f.print(altitudeLog[i]);
       f.print("}");
       if (i < logIndex - ignoreLastEntries) {
         f.print(",");
