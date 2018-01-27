@@ -5,8 +5,5 @@ Visual alti works with neopixel led strip. Any arduino works fine. You will also
 ### Required libraries
 * [Modified Adafruit BMP280 library](https://github.com/EquipeRocket/Adafruit_BMP280_Library)
 * [Adafruit Neopixel library](https://github.com/adafruit/Adafruit_NeoPixel)
-
-### Todo
-* ground detection - use deep sleep when we are on the ground
-* flight detection
-* freefall detection - probably take two measurments 1s apart and if the altitude diff is more than 35m/s we are in freefall
+* [SPIFFS upload tool](https://github.com/me-no-dev/arduino-esp32fs-plugin)
+* [Webserver TNG](https://github.com/bbx10/WebServer_tng)
