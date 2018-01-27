@@ -42,8 +42,6 @@ RTC_DATA_ATTR double pressureHistory[11];
 RTC_DATA_ATTR int logIndex = 0;
 RTC_DATA_ATTR bool firstBoot = true;
 
-#define arr_len(x) (sizeof(x) / sizeof(*x))
-
 void setup()
 {
   Serial.begin(115200);
