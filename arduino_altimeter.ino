@@ -7,6 +7,13 @@
 #include "FS.h"
 #include <SPIFFS.h>
 
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+
+WebServer server(80);
+
 Adafruit_BMP280 bmp; // I2C
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
 const int ledPin =  LED_BUILTIN;
@@ -41,6 +48,9 @@ RTC_DATA_ATTR double baseline;
 RTC_DATA_ATTR double pressureHistory[11];
 RTC_DATA_ATTR int logIndex = 0;
 RTC_DATA_ATTR bool firstBoot = true;
+
+bool startServer = false;
+const char* host = "alti-jure";
 
 void setup()
 {
@@ -79,7 +89,17 @@ void setup()
 
     if (resetCount == 4) {
       flashStrip(green, 1, 1000, 0);
-      printLog();
+
+      WiFi.softAP("altijure", "testalti");
+
+      Serial.println();
+      Serial.print("IP address: ");
+      Serial.println(WiFi.softAPIP());
+
+      httpServer();
+      startServer = true;
+
+      Serial.println("HTTP server started");
     }
     else {
       File f = SPIFFS.open("/reset", "w");
@@ -107,12 +127,15 @@ void setup()
 void loop() {
   unsigned long currentMillis = millis();
 
+  if (startServer) {
+    server.handleClient();
+  }
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
 
     altitude = getAltitude();
 
-    printStatus();
+    //printStatus(); //odkomentiraj za debuging
 
     altitudeLog[logIndex] = altitude;
     timeLog[logIndex] = millis();
