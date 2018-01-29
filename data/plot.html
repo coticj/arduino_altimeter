@@ -1,0 +1,207 @@
+
+<html>
+<head>
+    <title>Logger</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="-1">
+    <style type="text/css">
+        <!--
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: small;
+            margin: 0;
+            padding: 0;
+        }
+
+        textarea {
+            width: 100%;
+            max-width: 100%;
+            min-height: 79px;
+        }
+
+        #head {
+            left: 0;
+            right: 0;
+            padding: 10px;
+            background-color: #fdf8ea;
+        }
+
+        #charts {
+            padding: 10px;
+        }
+        -->
+    </style>
+    <script type="text/javascript" src="loader.js"></script>
+    <script type="text/javascript" src="jquery-3.2.1.min.js"></script>
+    <script type="text/javascript">
+    var jsondata;
+   $(document).ready(function() {
+      
+       $.ajax({
+           url : "log.txt",
+           dataType: "text",
+           success : function (data) {
+              // $("#input").text(data);
+               jsondata=data;
+           }
+       });
+   
+}); 
+    
+    
+
+        var input;
+        var offset;
+        var smoothing;
+        var windowWidth;
+        var chartWidth;
+        var chartHeight;
+        var chartAreaHeight;
+
+        function init() {
+            input = document.getElementById('input');
+            smoothing = document.getElementById('smoothing');
+
+            offsetInput = document.getElementById('offset');
+            offset = Number(offsetInput.value);
+
+            windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+
+            chartWidth = Math.min(windowWidth - 40, 1200);
+            chartHeight = chartWidth / 2;
+
+            chartAreaHeight = (80 - ((1200 - chartWidth) / 45)) + '%';
+        }
+
+        // Load the Visualization API and the corechart package.
+        google.charts.load('current', { 'packages': ['corechart'] });
+
+        // Set a callback to run when the Google Visualization API is loaded.
+        //google.charts.setOnLoadCallback(drawChart);
+
+        // Callback that creates and populates a data table,
+        // instantiates the pie chart, passes in the data and
+        // draws it.
+        function drawCharts() {
+
+            var charts = document.getElementById('charts')
+
+            while (charts.firstChild)
+                charts.removeChild(charts.firstChild);
+
+            var json = JSON.parse(jsondata);
+
+            for (var i = 0; i < json.length; i++) {
+
+                var jumpNumber = i + 1;
+
+                var div = document.createElement("DIV");
+                div.id = "chart" + jumpNumber;
+                charts.appendChild(div);
+
+                // Create the data table.
+                var data = new google.visualization.DataTable();
+                data.addColumn('number', 'time');
+                data.addColumn('number', 'altitude');
+                data.addColumn('number', 'speed');
+
+                var jump = json[i];
+
+                var timeFirst = jump.readings[0].time;
+
+                for (var j = 0; j < jump.readings.length; j++) {
+                    var reading = jump.readings[j];
+                    var time = (reading.time - timeFirst) / 1000;
+
+                    var ofst = (offset > j) ? j : offset;
+                    var readingOffset = jump.readings[j - ofst]
+                    var speed = ((readingOffset.altitude - reading.altitude) / (reading.time - readingOffset.time)) * 1000 * 3.6;
+
+                    data.addRow([time, reading.altitude, speed]);
+                }
+
+                // Set chart options
+                var options = {
+                    title: 'jump ' + jumpNumber,
+                    width: chartWidth,
+                    height: chartHeight,
+                    curveType: 'function',
+                    legend: {
+                        position: 'bottom'
+                    },
+                    chartArea: {
+                        width: '80%',
+                        height: chartAreaHeight
+                    },
+                    series: {
+                        // Gives each series an axis name that matches the Y-axis below.
+                        0: {
+                            axis: 'Altitude',
+                            targetAxisIndex: 0
+                        },
+                        1: {
+                            axis: 'Speed',
+                            targetAxisIndex: 1
+                        }
+                    },
+                    vAxes: {
+                        // Adds titles to each axis.
+                        0: {
+                            title: 'Altitude (m)',
+                            gridlines: {
+                                count: 10
+                            }
+                        },
+                        1: {
+                            title: 'Speed (km/h)',
+                            gridlines: {
+                                count: 10
+                            }
+                        }
+                    },
+                    hAxis: {
+                        title: 'Time (s)',
+                        gridlines: {
+                            count: 10
+                        },
+                        minorGridlines: {
+                            count: 1
+                        }
+                    }
+                };
+
+                // Instantiate and draw our chart, passing in some options.
+                var chart = new google.visualization.LineChart(div);
+                chart.draw(data, options);
+            }
+        }
+
+        function onSmoothingChange() {
+            offsetInput = document.getElementById('offset');
+            offset = Number(offsetInput.value);
+
+            smoothing.innerHTML = offset * 0.5 + " s";
+        }
+    </script>
+</head>
+<body onLoad="init()">
+    <div id="head">
+        <div>
+            JSON data from logger:
+            <br />
+            <textarea id="input" rows="5"></textarea>
+        </div>
+        <div style="height:5px"></div>
+        <div>
+            smoothing:
+            <input id="offset" type="text" onchange="onSmoothingChange()" value="10" style="width:50px" /> = <span id="smoothing">5 s</span>
+            <span style="display: inline-block; width: 20px;"></span>
+            <button type="button" onclick="drawCharts()">Plot charts</button>
+        </div>
+    </div>
+
+    <div id="charts"></div>
+</body>
+</html>
