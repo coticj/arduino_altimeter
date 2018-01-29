@@ -6,6 +6,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "FS.h"
 #include <SPIFFS.h>
+#include <ArduinoJson.h>
 
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -52,6 +53,39 @@ RTC_DATA_ATTR bool firstBoot = true;
 bool startServer = false;
 const char* host = "alti-jure";
 
+// Configuration that we'll store on disk
+struct Config {
+  char ssid[64];
+  char password[64];
+};
+
+Config config;
+
+void loadConfiguration(Config &config) {
+  // Open file for reading
+  File file = SPIFFS.open("/config.txt", "r");
+
+  // Allocate the memory pool on the stack.
+  // Don't forget to change the capacity to match your JSON document.
+  // Use arduinojson.org/assistant to compute the capacity.
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 20;
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+
+  // Parse the root object
+  JsonObject &root = jsonBuffer.parseObject(file);
+
+  if (!root.success())
+    Serial.println(F("Failed to read file, using default configuration"));
+
+  // Copy values from the JsonObject to the Config
+  strlcpy(config.ssid,                   // <- destination
+          root["ssid"] | "alti-new",  // <- source
+          sizeof(config.ssid));          // <- destination's capacity
+  strlcpy(config.password, root["password"] | "altinew", sizeof(config.password));
+
+  file.close();
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -73,6 +107,10 @@ void setup()
 
     SPIFFS.begin();
 
+    //naloži konfiguracijo
+    Serial.println(F("Loading config..."));
+    loadConfiguration(config);
+
     int resetCount = 1;
     if (SPIFFS.exists("/reset")) {
       File f = SPIFFS.open("/reset", "r");
@@ -90,7 +128,7 @@ void setup()
     if (resetCount == 4) {
       flashStrip(green, 1, 1000, 0);
 
-      WiFi.softAP("altijure", "testalti");
+      WiFi.softAP(config.ssid, config.password);
 
       Serial.println();
       Serial.print("IP address: ");
@@ -285,75 +323,12 @@ double getPressure() {
   return bmp.readPressure() / 100;
 }
 
-void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, int finalDelay) {
-  if (offDuration == -1) {
-    offDuration = onDuration;
-  };
-  for (int i = 0; i < numTimes; i++) {
-    setStrip(color);
-    delay(onDuration);
-    setStrip(off);
-    delay(offDuration);
-  }
-  if (finalDelay > 0) {
-    delay(finalDelay);
-  }
+double getTemperature() {
+  return bmp.readTemperature();
 }
 
-void flashBuiltinLed(int numTimes, int onDuration, int offDuration, int finalDelay) {
-  if (offDuration == -1) {
-    offDuration = onDuration;
-  };
-  for (int i = 0; i < numTimes; i++) {
-    digitalWrite(ledPin, HIGH);
-    delay(onDuration);
-    digitalWrite(ledPin, LOW);
-    delay(offDuration);
-  }
-  if (finalDelay > 0) {
-    delay(finalDelay);
-  }
-}
 
-void setStrip(uint32_t c) {
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-  }
-  strip.show();
-}
 
-float getBatteryVoltage()
-{
-  float measurement = analogRead(A13);
 
-  float measuredvbat = (measurement / 4095) * 2 * 3.3 * 1.1;
-
-  return measuredvbat;
-}
-
-float getBatteryPercentage()
-{
-  return _min(map(getBatteryVoltage() * 10, 3.30 * 10, 4.2 * 10, 0, 100), 100); // Calculate Battery Level (Percent)
-}
-
-void signalBatteryPercentage() {
-  pinMode(ledPin, OUTPUT); //set builtin led
-  float batt = getBatteryPercentage();
-  if (batt < 20) {
-    flashBuiltinLed(1, 2000); // no bars
-  }
-  else if (batt < 40) {
-    flashBuiltinLed(1, 500, 0); // one bar
-  }
-  else if (batt < 60) {
-    flashBuiltinLed(2, 500, 200); // two bars
-  }
-  else if (batt < 80) {
-    flashBuiltinLed(3, 500, 200); // three bars
-  }
-  else {
-    flashBuiltinLed(4, 500, 200); // four bars
-  }
-}
 
 
