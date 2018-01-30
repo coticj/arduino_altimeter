@@ -7,3 +7,5 @@ Visual alti works with neopixel led strip. Any arduino works fine. You will also
 * [Adafruit Neopixel library](https://github.com/adafruit/Adafruit_NeoPixel)
 * [SPIFFS upload tool](https://github.com/me-no-dev/arduino-esp32fs-plugin)
 * [Webserver TNG](https://github.com/bbx10/WebServer_tng)
+* [Arduino Json](https://github.com/bblanchon/ArduinoJson)
+* [TimeLib](https://github.com/PaulStoffregen/Time)
