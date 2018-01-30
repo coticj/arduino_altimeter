@@ -91,7 +91,7 @@ void loadConfiguration(Config &config) {
 void setup()
 {
   Serial.begin(115200);
-  Serial.println("");
+  Serial.println(F(""));
   if (!bmp.begin()) {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
     while (1);
@@ -124,7 +124,7 @@ void setup()
       resetCount += s.toInt();
     }
 
-    Serial.print("reset count: ");
+    Serial.print(F("reset count: "));
     Serial.println(resetCount);
 
     if (resetCount == 4) {
@@ -133,13 +133,13 @@ void setup()
       WiFi.softAP(config.ssid, config.password);
 
       Serial.println();
-      Serial.print("IP address: ");
+      Serial.print(F("IP address: "));
       Serial.println(WiFi.softAPIP());
 
       httpServer();
       startServer = true;
 
-      Serial.println("HTTP server started");
+      Serial.println(F("HTTP server started"));
     }
     else {
       File f = SPIFFS.open("/reset", "w");
@@ -159,9 +159,9 @@ void setup()
     flashStrip(off, 200, 0); // Initialize all pixels to 'off'
     long adjustment = intervalGround / 1000;
     setTime(sleepTimestamp);
-    Serial.print("ts before sleep:");
+    Serial.print(F("ts before sleep:"));
     Serial.println(sleepTimestamp);
-    Serial.print("ts after sleep:");
+    Serial.print(F("ts after sleep:"));
     Serial.println(sleepTimestamp + adjustment);
     adjustTime(adjustment);
     SPIFFS.begin();
@@ -181,7 +181,7 @@ void loop() {
 
     time_t t = now();
     Serial.print(hour(t));
-    Serial.print(":");
+    Serial.print(F(":"));
     Serial.print(minute(t));
     Serial.println();
     Serial.println(now());
@@ -288,25 +288,19 @@ void saveLog(int ignoreLastEntries) {
   // open file for writing
   File f = SPIFFS.open("/log.txt", "a");
   if (!f) {
-    Serial.println("file open failed");
+    Serial.println(F("file open failed"));
   }
   else {
-    Serial.println("====== Writing to SPIFFS file =========");
-    f.print("{ \"readings\": [ ");
+    Serial.println(F("====== Writing to SPIFFS file ========="));
     int i = 0;
     for (i; i <= logIndex - ignoreLastEntries; i++) {
-      f.print("{\"time\": ");
       f.print(timeLog[i]);
-      f.print(", ");
-      f.print("\"altitude\": ");
+      f.print(",");
       f.print(altitudeLog[i]);
-      f.print("}");
-      if (i < logIndex - ignoreLastEntries) {
-        f.print(",");
+      f.print(";");
       }
     }
-    f.println(" ]");
-    f.println(" }, ");
+    f.println(";");
   }
 
   f.close();
@@ -315,7 +309,7 @@ void saveLog(int ignoreLastEntries) {
 void printLog() {
   File f = SPIFFS.open("/log.txt", "r");
   if (!f) {
-    Serial.println("file open failed");
+    Serial.println(F("file open failed"));
   }
   else {
     String s;
@@ -325,9 +319,7 @@ void printLog() {
     f.close();
     int s_end = s.lastIndexOf(",");
     s.remove(s_end);
-    Serial.println("[");
     Serial.println(s);
-    Serial.println("]");
   }
 }
 
