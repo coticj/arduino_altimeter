@@ -298,7 +298,6 @@ void saveLog(int ignoreLastEntries) {
       f.print(",");
       f.print(altitudeLog[i]);
       f.print(";");
-      }
     }
     f.println(";");
   }
