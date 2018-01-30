@@ -18,6 +18,13 @@ void httpServer()
     flashStrip(orange, 4, 200);
   } );
 
+  server.on("/time", []() {
+    if (server.hasArg("time")) {
+      setTime(server.arg("time").toInt());
+      server.send(200, "text/html", "Time was set");
+    }
+  });
+
   server.onNotFound([]() {
     if (!handleFileRead(server.uri()))
       server.send(404, "text/plain", "FileNotFound");

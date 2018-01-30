@@ -7,9 +7,7 @@ $( document ).ready(function() {
   function updateValues() {
       $.getJSON("/all" ).done(function(data) {
            $('#temp').html(data.temp);
-          $('#relalt').html(data.relalt);
-          $('#baseline').html(data.baseline);
-           $('#batteryVoltage').html(data.batteryVoltage);
+               $('#batteryVoltage').html(data.batteryVoltage);
           $('#batteryPercentage').html(data.batteryPercentage);
 
           setTimeout(updateValues, 3000);
@@ -25,13 +23,6 @@ $( document ).ready(function() {
     });
   });
   
-  $("#calibrate").click(function(e) {
-    e.preventDefault();
-    $.get( "/calibrate", function( data ) {
-      alert( "Baseline reset was performed." );
-    });
-  });
-  
   $("#restart").click(function(e) {
     e.preventDefault();
     $.get( "/restart", function( data ) {
@@ -39,13 +30,19 @@ $( document ).ready(function() {
     });
   });
   
-  $("#woff").click(function(e) {
-    e.preventDefault();
-    $.get( "/woff", function( data ) {
-      alert( "Wifi was turned off." );
-    });
+  $("#setTime").click(function(e) {
+      e.preventDefault();
+      var d = new Date();
+      $.post("/time", {
+          time: (Math.round(Date.now()/1000))
+      }).done(function(data) {
+          alert(data);
+      });
   });
   
+  $('#time').html(Date.now());
+  
+  	
   
   
     
@@ -56,20 +53,26 @@ $( document ).ready(function() {
 </head>
 
 <a href="plot.html">Plot</a>
+<a href="config.html">Config</a>
+
 
 <p>Temp: <span id="temp"></span></p>
-<p>Relative altitude: <span id="relalt"></span></p>
-<p>Baseline: <span id="baseline"></span> </p>
 
 <p>Battery voltage: <span id="batteryVoltage"></span></p>
 
 <p>Battery percentage: <span id="batteryPercentage"></span></p>
 
+<p>Time: <span id="time"></span></p>
+
+
+
 
 <button id="test">Test LEDs</button>
-<button id="calibrate">Reset to ground</button>
+
 <button id="restart">Restart alti</button>
-<button id="woff">Wifi off</button>
+
+<button id="setTime">Set time</button>
+
 
 
 

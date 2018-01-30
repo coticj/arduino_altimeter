@@ -7,6 +7,7 @@
 #include "FS.h"
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
+#include <TimeLib.h>
 
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -49,6 +50,7 @@ RTC_DATA_ATTR double baseline;
 RTC_DATA_ATTR double pressureHistory[11];
 RTC_DATA_ATTR int logIndex = 0;
 RTC_DATA_ATTR bool firstBoot = true;
+RTC_DATA_ATTR time_t sleepTimestamp;
 
 bool startServer = false;
 const char* host = "alti-jure";
@@ -155,7 +157,13 @@ void setup()
   else {
     strip.begin();
     flashStrip(off, 200, 0); // Initialize all pixels to 'off'
-
+    long adjustment = intervalGround / 1000;
+    setTime(sleepTimestamp);
+    Serial.print("ts before sleep:");
+    Serial.println(sleepTimestamp);
+    Serial.print("ts after sleep:");
+    Serial.println(sleepTimestamp + adjustment);
+    adjustTime(adjustment);
     SPIFFS.begin();
   }
 
@@ -170,6 +178,13 @@ void loop() {
   }
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
+
+    time_t t = now();
+    Serial.print(hour(t));
+    Serial.print(":");
+    Serial.print(minute(t));
+    Serial.println();
+    Serial.println(now());
 
     altitude = getAltitude();
 
@@ -253,6 +268,7 @@ void ifNoChangeOnGroundStartDeepSleep() {
     baseline = pressureHistory[logIndex - 10];
     logIndex = 10;
     esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
+    sleepTimestamp = now();
     esp_deep_sleep_start();
   }
 }
