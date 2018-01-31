@@ -159,10 +159,6 @@ void setup()
     flashStrip(off, 200, 0); // Initialize all pixels to 'off'
     long adjustment = intervalGround / 1000;
     setTime(sleepTimestamp);
-    Serial.print(F("ts before sleep:"));
-    Serial.println(sleepTimestamp);
-    Serial.print(F("ts after sleep:"));
-    Serial.println(sleepTimestamp + adjustment);
     adjustTime(adjustment);
     SPIFFS.begin();
   }
@@ -178,13 +174,6 @@ void loop() {
   }
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-
-    time_t t = now();
-    Serial.print(hour(t));
-    Serial.print(F(":"));
-    Serial.print(minute(t));
-    Serial.println();
-    Serial.println(now());
 
     altitude = getAltitude();
 
@@ -333,9 +322,3 @@ double getPressure() {
 double getTemperature() {
   return bmp.readTemperature();
 }
-
-
-
-
-
-
