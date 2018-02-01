@@ -53,7 +53,7 @@ RTC_DATA_ATTR bool firstBoot = true;
 RTC_DATA_ATTR time_t sleepTimestamp;
 
 bool startServer = false;
-const char* host = "alti-jure";
+const char* host = "alti";
 
 // Configuration that we'll store on disk
 struct Config {
@@ -81,9 +81,9 @@ void loadConfiguration(Config &config) {
 
   // Copy values from the JsonObject to the Config
   strlcpy(config.ssid,                   // <- destination
-          root["ssid"] | "alti-new",  // <- source
+          root["ssid"] | "alti-unset",  // <- source
           sizeof(config.ssid));          // <- destination's capacity
-  strlcpy(config.password, root["password"] | "altinew", sizeof(config.password));
+  strlcpy(config.password, root["password"] | "altiunset", sizeof(config.password));
 
   file.close();
 }

@@ -1,4 +1,0 @@
-{
-  "ssid": "krneki",
-  "password": "jurejure"
-}

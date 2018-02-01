@@ -37,7 +37,9 @@ void httpServer()
   } );
 
   server.on ( "/updateConfig", []() {
-    server.send ( 200, "text/plain", "");
+    saveConfiguration(server.arg("ssid"), server.arg("password"));
+    server.sendHeader("Location","/");
+    server.send(301);
   } );
 
   server.onNotFound([]() {
@@ -49,6 +51,31 @@ void httpServer()
   server.begin();
 
 }
+
+//save config
+void saveConfiguration(String ssid, String password) {
+  // Delete existing file, otherwise the configuration is appended to the file
+  SPIFFS.remove("/config.txt");
+
+  // Open file for writing
+  File file = SPIFFS.open("/config.txt", "w");
+  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 20;
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+    
+  // Parse the root object
+  JsonObject &root = jsonBuffer.createObject();
+
+  // Set the values
+  root["ssid"] = ssid;
+  root["password"] = password;
+
+  // Serialize JSON to file
+  if (root.printTo(file) == 0) {
+    Serial.println(F("Failed to write to file"));
+  }
+  file.close();
+}
+
 
 //webserver
 String formatBytes(size_t bytes) {
