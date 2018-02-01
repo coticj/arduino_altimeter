@@ -5,13 +5,12 @@
 <script>
 $( document ).ready(function() {
   function updateValues() {
-      $.getJSON("/all" ).done(function(data) {
-           $('#temp').html(data.temp);
-               $('#batteryVoltage').html(data.batteryVoltage);
-          $('#batteryPercentage').html(data.batteryPercentage);
-
-          setTimeout(updateValues, 3000);
-      });
+    $.getJSON("/all" ).done(function(data) {
+      $('#temp').html(data.temp);
+      $('#batteryPercentage').html(data.batteryPercentage);
+      $('#time').html(data.time);
+      setTimeout(updateValues, 3000);
+    });
   }
   
   function setTime() {
@@ -20,10 +19,10 @@ $( document ).ready(function() {
         time: (Math.round(Date.now()/1000)-(d.getTimezoneOffset()*60))
     }).done(function(data) {
         //alert(data);
+        updateValues();
     });
   }
-
-  updateValues();
+  
   setTime();
 
   $("#test").click(function(e) {
@@ -40,31 +39,33 @@ $( document ).ready(function() {
     });
   });
   
-  $('#time').html(Date.now());
+  $("#clearLog").click(function(e) {
+    e.preventDefault();
+    var checkstr =  confirm('Are you sure you want to CLEAR logs?');
+    if(checkstr == true){
+      $.get( "/clearLogs", function( data ) {
+        alert( data );
+      });
+    }else{
+    return false;
+    }    
+  });
   
-  
-  
-  	
-  
-  
-    
 });
 
 </script>
 
 </head>
 
-<a href="plot.html">Plot</a>
+<a href="plot.html">Jump charts</a>
 <a href="config.html">Config</a>
 
 
 <p>Temp: <span id="temp"></span></p>
 
-<p>Battery voltage: <span id="batteryVoltage"></span></p>
-
 <p>Battery percentage: <span id="batteryPercentage"></span></p>
 
-<p>Time: <span id="time"></span></p>
+<p>Time now: <span id="time">No time yet</span></p>
 
 
 
@@ -72,5 +73,7 @@ $( document ).ready(function() {
 <button id="test">Test LEDs</button>
 
 <button id="restart">Restart alti</button>
+
+<button id="clearLog">Clear log</button>
 
 </html>

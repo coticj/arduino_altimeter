@@ -1,0 +1,34 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="jquery-3.2.1.min.js"></script>
+<script>
+$( document ).ready(function() {
+  function fillValues() {
+    $.getJSON("/getConfig" ).done(function(data) {
+      $('#ssid').val(data.ssid);
+      $('#password').val(data.password);      
+    });
+  }  
+  fillValues();
+  
+});
+
+</script>
+
+</head>
+<a href="/">Start page</a>
+<a href="plot.html">Jump charts</a>
+
+<form action="/updateConfig">
+  SSID:<br>
+  <input type="text" id="ssid" name="ssid" value="">
+  <br>
+  WIFI Password:<br>
+  <input type="text" id="password" name="password" value="">
+  <br><br>
+  <input type="submit" value="Save">
+</form> 
+
+
+</html>

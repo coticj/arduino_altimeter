@@ -6,7 +6,9 @@ void httpServer()
   } );
 
   server.on ( "/all", []() {
-    server.send ( 200, "text/plain", "{\"temp\":\"" + String(getTemperature()) + "\",\"batteryVoltage\":\"" + String(getBatteryVoltage()) + "\",\"batteryPercentage\":\"" + String(getBatteryPercentage()) + "\"}");
+    time_t t = now();
+    String timeNow = String(hour(t)) + ":" + String(minute(t)) + " " + String(day(t)) + "." + String(month(t)) + "." + String(year(t));
+    server.send ( 200, "text/plain", "{\"temp\":\"" + String(getTemperature()) + "\",\"batteryPercentage\":\"" + String(getBatteryPercentage()) + "\",\"time\":\"" + timeNow + "\"}");
   } );
 
   server.on ( "/test", []() {
@@ -24,6 +26,19 @@ void httpServer()
       server.send(200, "text/html", "Time was set");
     }
   });
+
+  server.on("/clearLogs", []() {
+    SPIFFS.remove("/log.txt");
+    server.send(200, "text/html", "Logs were cleared.");
+  });
+
+  server.on ( "/getConfig", []() {
+    server.send ( 200, "text/plain", "{\"ssid\":\"" + String(config.ssid) + "\",\"password\":\"" + String(config.password) + "\",\"dropzone\":\"" + String(getBatteryPercentage()) + "\"}");
+  } );
+
+  server.on ( "/updateConfig", []() {
+    server.send ( 200, "text/plain", "");
+  } );
 
   server.onNotFound([]() {
     if (!handleFileRead(server.uri()))
