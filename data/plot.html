@@ -1,5 +1,5 @@
-
-<html><body onload="init()">﻿
+<html>
+   ﻿
 <head>
     <title>Logger</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -13,6 +13,8 @@
         var offsetInput;
         var offset;
         var smoothing;
+        var windowWidth;
+        var lineWidth;
         //lahko naloadamo samo file po file, zaporedno
         $(document).ready(function() {
             $.getScript( "Chart.min.js" )
@@ -33,6 +35,9 @@
             input = document.getElementById('input');
             smoothing = document.getElementById('smoothing');
 
+            windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+            lineWidth = Math.max(windowWidth / 600, 1);
+
             offsetInput = document.getElementById('offset');
             onSmoothingChange();
         }
@@ -43,79 +48,105 @@
 
             while (charts.firstChild)
                 charts.removeChild(charts.firstChild);
+            
+                var jumps = logfile.split(";;");
 
+                for (var i = jumps.length - 2; i >= 0; i--) {
 
-            var jumps = logfile.split(";;");
+                    var jumpNumber = i + 1;
 
-            for (var i = jumps.length-1; i >= 0; i--) {
+                    var canvas = document.createElement("canvas");
+                    canvas.id = "chart" + jumpNumber;
+                    charts.appendChild(canvas);
+                    var div = document.createElement("div");
+                    div.id = "div" + jumpNumber;
+                    charts.appendChild(div);
 
-                var jumpNumber = i + 1;
+                    var jump = jumps[i].trim();
+                    var jumpData = jump.split("|");
+                    var dateTime = new Date(Number(jumpData[0]) * 1000);
+                    var readings = jumpData[1].split(";");
 
-                var canvas = document.createElement("canvas");
-                canvas.id = "chart" + jumpNumber;
-                charts.appendChild(canvas);
+                    var readingFirst = readings[0].split(",");
+                    var timeFirst = Number(readingFirst[0]);
 
-                var jump = jumps[i];
+                    var time_arr = new Array(readings.length);
+                    var altitide_arr = new Array(readings.length);
+                    var speed_arr = new Array(readings.length);
 
-                var readings = jump.split(";");
-                var readingFirst = readings[0].split(",");
-                var timeFirst = Number(readingFirst[0]);
+                    for (var j = 0; j < readings.length; j++) {
+                        var reading = readings[j].split(",");
+                        var timeRelative = (Number(reading[0]) - timeFirst) / 1000;
+                        var time = Number(reading[0]);
+                        var altitude = Number(reading[1]) / 100;
+                        var ofst = (offset > j) ? j : offset;
+                        var readingOffset = readings[j - ofst].split(",");
+                        var timeOffset = Number(readingOffset[0]);
+                        var altitudeOffset = Number(readingOffset[1]) / 100;
+                        var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 1000 * 3.6;
 
-                var time_arr = new Array(readings.length);
-                var altitide_arr = new Array(readings.length);
-                var speed_arr = new Array(readings.length);
+                        time_arr[j] = timeRelative
+                        altitide_arr[j] = altitude;
+                        speed_arr[j] = speed.toFixed(2);
+                    }
 
-                for (var j = 0; j < readings.length; j++) {
-                    var reading = readings[j].split(",");
-                    var timeRelative = (Number(reading[0]) - timeFirst) / 1000;
-                    var time = Number(reading[0]);
-                    var altitude = Number(reading[1]) / 100;
-                    var ofst = (offset > j) ? j : offset;
-                    var readingOffset = readings[j - ofst].split(",");
-                    var timeOffset = Number(readingOffset[0]);
-                    var altitudeOffset = Number(readingOffset[1]) / 100;
-                    var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 1000 * 3.6;
+                    var title = "jump " + jumpNumber;
+                    var details = getJumpDetails(time_arr, altitide_arr);
 
-                    time_arr[j] = timeRelative
-                    altitide_arr[j] = altitude;
-                    speed_arr[j] = speed;
+                    drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
+
+                    displayjumpDetails(dateTime, details, div);
                 }
-
-                drawChart(canvas, jumpNumber, time_arr, altitide_arr, speed_arr);
-            }
-
+            
         }
 
-        function drawChart(canvas, jumpNumber, time_arr, altitide_arr, speed_arr) {
+            
+        function drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details) {
+            var freefall_arr = new Array(time_arr.length);
+
+            for (var i = 0; i < time_arr.length; i++) {
+                freefall_arr[i] = (i >= details.indexOfExit && i <= details.indexOfOpening) ? altitide_arr[i] : NaN;
+            }
+
             var chart = new Chart(canvas, {
                 type: 'line',
 
                 data: {
                     labels: time_arr,
                     datasets: [{
-                            label: "Altitude",
-                            borderColor: '#3366cc',
-                            backgroundColor: 'transparent',
-                            data: altitide_arr,
-                            yAxisID: "y-axis-left",
-                            pointHitRadius: 5
-                        },
-                        {
-                            label: "Speed",
-                            borderColor: '#dc3912',
-                            backgroundColor: 'transparent',
-                            data: speed_arr,
-                            yAxisID: "y-axis-right",
-                            pointHitRadius: 5
-                        }
-                    ]
+                        label: "Altitude",
+                        borderWidth: lineWidth,
+                        borderColor: '#3366cc',
+                        backgroundColor: 'transparent',
+                        data: altitide_arr,
+                        yAxisID: "y-axis-left",
+                        pointHitRadius: 5
+                    },
+                    {
+                        label: "Speed",
+                        borderWidth: lineWidth,
+                        borderColor: '#dc3912',
+                        backgroundColor: 'transparent',
+                        data: speed_arr,
+                        yAxisID: "y-axis-right",
+                        pointHitRadius: 5
+                    },
+                    {
+                        label: "Freefall",
+                        borderWidth: lineWidth,
+                        borderColor: 'rgba(51, 102, 204, 0.2)',
+                        backgroundColor: 'rgba(51, 102, 204, 0.2)',
+                        data: freefall_arr,
+                        yAxisID: "y-axis-left",
+                        pointHitRadius: 0
+                    }]
                 },
 
                 options: {
                     title: {
                         display: true,
-                        text: 'jump ' + jumpNumber,
-                        fontSize: 18
+                        text: title,
+                        fontSize: Math.max(windowWidth / 50, 14)
                     },
                     elements: {
                         point: {
@@ -124,21 +155,42 @@
                     },
                     legend: {
                         labels: {
-                            boxWidth: 12
+                            boxWidth: 1
                         }
                     },
                     tooltips: {
                         mode: 'index',
-                        backgroundColor: 'rgba(255,255,255,0.8)',
+                        backgroundColor: 'rgba(255,255,255,0.9)',
                         titleFontColor: '#666',
                         bodyFontColor: '#666',
                         footerFontColor: '#666',
-                        borderColor: 'rgba(0,0,0,0.5)',
+                        borderColor: 'rgba(0,0,0,0.33)',
                         borderWidth: 1,
                         displayColors: false,
-                        position: 'nearest'
+                        position: 'nearest',
+                        callbacks: {
+                            title: function (tooltipItems, data) {
+                                var tooltipItem = tooltipItems[0];
+                                return data.labels[tooltipItem.index] + " s";
+                            },
+                            label: function (tooltipItems, data) {
+                                var labelSuffix = tooltipItems.datasetIndex == 0 ? " m" : " km/h";
+                                return data.datasets[tooltipItems.datasetIndex].label + ': ' + tooltipItems.yLabel + labelSuffix;
+                            }
+                        },
+                        filter: function (tooltipItem) {
+                            return tooltipItem.datasetIndex < 2;
+                        }
                     },
                     responsive: true,
+                    onResize: function (chart, size) {
+                        windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+                        lineWidth = Math.max(windowWidth / 600, 1);
+                        chart.data.datasets.forEach(function (dataset) {
+                            dataset.borderWidth = lineWidth;
+                        });
+                        chart.options.title.fontSize = Math.max(windowWidth / 50, 14);
+                    },
                     scales: {
                         xAxes: [{
                             scaleLabel: {
@@ -151,26 +203,25 @@
                             }
                         }],
                         yAxes: [{
-                                type: "linear",
+                            type: "linear",
+                            display: true,
+                            position: "left",
+                            id: "y-axis-left",
+                            scaleLabel: {
                                 display: true,
-                                position: "left",
-                                id: "y-axis-left",
-                                scaleLabel: {
-                                    display: true,
-                                    labelString: 'Altitude (m)'
-                                },
+                                labelString: 'Altitude (m)'
                             },
-                            {
-                                type: "linear",
+                        },
+                        {
+                            type: "linear",
+                            display: true,
+                            position: "right",
+                            id: "y-axis-right",
+                            scaleLabel: {
                                 display: true,
-                                position: "right",
-                                id: "y-axis-right",
-                                scaleLabel: {
-                                    display: true,
-                                    labelString: 'Speed (km/h)'
-                                },
-                            }
-                        ]
+                                labelString: 'Speed (km/h)'
+                            },
+                        }]
                     }
                 }
             });
@@ -178,7 +229,86 @@
 
         function onSmoothingChange() {
             offset = Number(offsetInput.value);
-            smoothing.innerHTML = offset * 0.5 + " s";
+            smoothing.innerHTML = offset * 0.5 + " sec avg";
+        }
+
+        function getJumpDetails(time_arr, altitide_arr) {
+            var offsetConstant = 10;
+            var exitSpeedConstant = 50;
+            var openingSpeedConstant = 50;
+
+            var speed_arr = new Array(time_arr.length);
+            for (var i = 0; i < time_arr.length; i++) {
+                var time = time_arr[i];
+                var altitude = altitide_arr[i];
+                var ofst = (offsetConstant > i) ? i : offsetConstant;
+                var timeOffset = time_arr[i - ofst];
+                var altitudeOffset = altitide_arr[i - ofst];
+                var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
+
+                speed_arr[i] = isNaN(speed) ? 0 : speed;
+            }
+
+            var indexOfMaxSpeed = speed_arr.reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
+            var indexOfAfterExit;
+            for (var i = indexOfMaxSpeed; i > -1; i--) {
+                if (speed_arr[i] < exitSpeedConstant) {
+                    indexOfAfterExit = i;
+                    break;
+                }
+            }
+            var indexOfExit = indexOfAfterExit;
+            var speedAfterExit = speed_arr[indexOfAfterExit];
+            for (var i = indexOfAfterExit; i > -1; i--) {
+                if (speed_arr[i] <= speedAfterExit) {
+                    indexOfExit = i;
+                    speedAfterExit = speed_arr[i];
+                }
+                else {
+                    break;
+                }
+            }
+            var indexOfOpening;
+            for (var i = indexOfMaxSpeed; i < speed_arr.length; i++) {
+                if (speed_arr[i] < openingSpeedConstant) {
+                    indexOfOpening = i - offsetConstant;
+                    break;
+                }
+            }
+
+            var avgSpeed = ((altitide_arr[indexOfExit] - altitide_arr[indexOfOpening]) / (time_arr[indexOfOpening] - time_arr[indexOfExit])) * 3.6;
+
+            var details = new Object();
+            details.exitAltitude = altitide_arr[indexOfExit];
+            details.exitTime = time_arr[indexOfExit];
+            details.openingAltitude = altitide_arr[indexOfOpening];
+            details.openingTime = time_arr[indexOfOpening];
+            details.maxSpeed = speed_arr[indexOfMaxSpeed].toFixed(2);
+            details.maxSpeedTime = time_arr[indexOfMaxSpeed];
+            details.averageSpeed = avgSpeed.toFixed(2);
+            details.indexOfExit = indexOfExit;
+            details.indexOfOpening = indexOfOpening;
+            return details;
+        }
+
+        function displayjumpDetails(dateTime, details, div) {
+            div.innerHTML = "Date and time of jump: " + dateTime.toString() +
+                "<br>" +
+                "Exit altitude: " + details.exitAltitude + " m" +
+                " " +
+                "(at " + details.exitTime + " s)" +
+                "<br>" +
+                "Opening altitude: " + details.openingAltitude + " m" +
+                " " +
+                "(at " + details.openingTime + " s)" +
+                "<br>" +
+                "Freefal time: " + (details.openingTime - details.exitTime) + " s" +
+                "<br>" +
+                "Max speed (5 sec avg): " + details.maxSpeed + " km/h" +
+                " " +
+                "(at " + details.maxSpeedTime + " s)" +
+                "<br>" +
+                "Average speed: " + details.averageSpeed + " km/h";
         }
 
         function convertToJSON() {
@@ -189,22 +319,28 @@
 
             if (isInputJson) {
                 json.innerHTML = "No need to convert.";
-            } else {
+            }
+            else {
                 var s = "[\n";
 
                 var jumps = input.value.split(";;");
 
-                for (var i = 0; i < jumps.length; i++) {
+                for (var i = 0; i < jumps.length - 1; i++) {
 
-                    s += "{ \"readings\": [ ";
+                    var jump = jumps[i].trim();
+                    var jumpData = jump.split("|");
+                    var dateTime = new Date(Number(jumpData[0]) * 1000);
+                    var readings = jumpData[1].split(";");
 
-                    var jump = jumps[i];
+                    var readingFirst = readings[0].split(",");
+                    var timeFirst = Number(readingFirst[0]);
 
-                    var readings = jump.split(";");
+                    s += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
+                    s += "\"readings\": [ ";
 
                     for (var j = 0; j < readings.length; j++) {
                         var reading = readings[j].split(",");
-                        var time = Number(reading[0]);
+                        var time = (Number(reading[0]) - timeFirst) / 1000;
                         var altitude = Number(reading[1]) / 100;
 
                         s += "{\"time\": " + time + ", \"altitude\": " + altitude + "}";
@@ -214,7 +350,7 @@
 
                     s += " ] }";
 
-                    if (i < jumps.length - 1)
+                    if (i < jumps.length - 2)
                         s += ",\n";
                 }
 
@@ -223,10 +359,17 @@
                 json.innerHTML = s;
             }
         }
+
+        Date.prototype.toString = function () {
+            return (
+                this.getUTCFullYear() + "-" + (this.getUTCMonth() + 1) + "-" + this.getUTCDate() +
+                " " +
+                this.getUTCHours() + ":" + this.getUTCMinutes()
+            );
+        }
     </script>
-
 </head>
-
+<body onload="init()">
     <div id="head">
         
         <div style="height: 5px">
