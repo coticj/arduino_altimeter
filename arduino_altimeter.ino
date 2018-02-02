@@ -179,7 +179,7 @@ void loop() {
 
     altitude = getAltitude();
 
-    //printStatus(); //odkomentiraj za debuging
+    // printStatus(); //odkomentiraj za debuging
 
     altitudeLog[logIndex] = altitude;
     timeLog[logIndex] = millis();
@@ -258,7 +258,7 @@ void ifNoChangeOnGroundStartDeepSleep() {
       !pressureAltitudeChange()) {
     baseline = pressureHistory[logIndex - 10];
     logIndex = 10;
-    esp_sleep_enable_timer_wakeup(intervalGround * 1000); //micro seconds to milliseconds
+    esp_sleep_enable_timer_wakeup(intervalGround * 1000); // milliseconds to microseconds
     sleepTimestamp = now();
     esp_deep_sleep_start();
   }
@@ -275,7 +275,7 @@ bool pressureAltitudeChange() {
 }
 
 void saveLog(int ignoreLastEntries) {
-  //write array to file
+  // write array to file
   // open file for writing
   File f = SPIFFS.open("/log.txt", "a");
   if (!f) {
@@ -283,14 +283,22 @@ void saveLog(int ignoreLastEntries) {
   }
   else {
     Serial.println(F("====== Writing to SPIFFS file ========="));
+
+    time_t timestamp = now();
+
+    f.print(timestamp);
+    f.print(F("|"));
+
+    unsigned long timeFirst = timeLog[0];
     int i = 0;
     for (i; i <= logIndex - ignoreLastEntries; i++) {
-      f.print(timeLog[i]);
-      f.print(",");
+      unsigned long timeRelative = (timeLog[i] - timeFirst) / 1000; // milliseconds to seconds
+      f.print(timeRelative);
+      f.print(F(","));
       f.print(altitudeLog[i]);
-      f.print(";");
+      f.print(F(";"));
     }
-    f.println(";");
+    f.println(F(";"));
   }
 
   f.close();

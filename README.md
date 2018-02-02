@@ -4,6 +4,15 @@ Visual alti works with neopixel led strip. Any arduino works fine. You will also
 
 Default ssid is going to be alti-unset and pass altiunset. Change by going to Config. You can access the unit at http://alti.local or http://192.168.4.1
 
+Or create a config.txt in data folder with the following content (password needs minimum 8 characters):
+
+{
+  "ssid": "MySSID",
+  "password": "mypassword"
+}
+
+and upload to ESP
+
 ### Required libraries
 * [Modified Adafruit BMP280 library](https://github.com/EquipeRocket/Adafruit_BMP280_Library)
 * [Adafruit Neopixel library](https://github.com/adafruit/Adafruit_NeoPixel)
