@@ -8,7 +8,7 @@ void httpServer()
   server.on ( "/all", []() {
     time_t t = now();
     String timeNow = String(hour(t)) + ":" + String(minute(t)) + " " + String(day(t)) + "." + String(month(t)) + "." + String(year(t));
-    server.send ( 200, "text/plain", "{\"temp\":\"" + String(getTemperature()) + "\",\"batteryPercentage\":\"" + String(getBatteryPercentage()) + "\",\"time\":\"" + timeNow + "\"}");
+    server.send ( 200, "text/plain", "{\"temp\":\"" + String(getTemperature()) + "\",\"batteryPercentage\":\"" + String(getBatteryPercentage()) + "\",\"time\":\"" + timeNow + "\",\"dz\":\"" + String(config.dz) + "\",\"aircraft\":\"" + String(config.aircraft) + "\"}");
   } );
 
   server.on ( "/test", []() {
@@ -33,12 +33,13 @@ void httpServer()
   });
 
   server.on ( "/getConfig", []() {
-    server.send ( 200, "text/plain", "{\"ssid\":\"" + String(config.ssid) + "\",\"password\":\"" + String(config.password) + "\",\"dropzone\":\"" + String(getBatteryPercentage()) + "\"}");
+    server.send ( 200, "text/plain", "{\"ssid\":\"" + String(config.ssid) + "\",\"password\":\"" + String(config.password) + "\",\"dz\":\"" + String(config.dz) + "\",\"aircraft\":\"" + String(config.aircraft) + "\"}");
   } );
 
   server.on ( "/updateConfig", []() {
-    saveConfiguration(server.arg("ssid"), server.arg("password"));
-    server.sendHeader("Location","/");
+    saveConfiguration(server.arg("ssid"), server.arg("password"), server.arg("dz"), server.arg("aircraft"));
+    loadConfiguration(config);
+    server.sendHeader("Location", "/");
     server.send(301);
   } );
 
@@ -53,21 +54,23 @@ void httpServer()
 }
 
 //save config
-void saveConfiguration(String ssid, String password) {
+void saveConfiguration(String ssid, String password, String dz, String aircraft) {
   // Delete existing file, otherwise the configuration is appended to the file
   SPIFFS.remove("/config.txt");
 
   // Open file for writing
   File file = SPIFFS.open("/config.txt", "w");
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 20;
+  const size_t bufferSize = JSON_OBJECT_SIZE(4) + 100;
   DynamicJsonBuffer jsonBuffer(bufferSize);
-    
+
   // Parse the root object
   JsonObject &root = jsonBuffer.createObject();
 
   // Set the values
   root["ssid"] = ssid;
   root["password"] = password;
+  root["dz"] = dz;
+  root["aircraft"] = aircraft;
 
   // Serialize JSON to file
   if (root.printTo(file) == 0) {

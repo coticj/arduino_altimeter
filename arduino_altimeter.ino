@@ -59,6 +59,8 @@ const char* host = "alti";
 struct Config {
   char ssid[64];
   char password[64];
+  char dz[64];
+  char aircraft[64];
 };
 
 Config config;
@@ -70,7 +72,7 @@ void loadConfiguration(Config &config) {
   // Allocate the memory pool on the stack.
   // Don't forget to change the capacity to match your JSON document.
   // Use arduinojson.org/assistant to compute the capacity.
-  const size_t bufferSize = JSON_OBJECT_SIZE(1) + 20;
+  const size_t bufferSize = JSON_OBJECT_SIZE(4) + 100;
   DynamicJsonBuffer jsonBuffer(bufferSize);
 
   // Parse the root object
@@ -84,6 +86,8 @@ void loadConfiguration(Config &config) {
           root["ssid"] | "alti-unset",  // <- source
           sizeof(config.ssid));          // <- destination's capacity
   strlcpy(config.password, root["password"] | "altiunset", sizeof(config.password));
+  strlcpy(config.dz, root["dz"] | "Unknown", sizeof(config.dz));
+  strlcpy(config.aircraft, root["aircraft"] | "Unknown", sizeof(config.aircraft));
 
   file.close();
 }
@@ -102,16 +106,15 @@ void setup()
   updatePressureHistory();
   ifNoChangeOnGroundStartDeepSleep();
 
+  SPIFFS.begin();
+  //naloži konfiguracijo
+  Serial.println(F("Loading config..."));
+  loadConfiguration(config);
+
   if (firstBoot) {
 
     strip.begin();
     flashStrip(off, 200, 0); // Initialize all pixels to 'off'
-
-    SPIFFS.begin();
-
-    //naloži konfiguracijo
-    Serial.println(F("Loading config..."));
-    loadConfiguration(config);
 
     int resetCount = 1;
     if (SPIFFS.exists("/reset")) {
@@ -160,7 +163,6 @@ void setup()
     long adjustment = intervalGround / 1000;
     setTime(sleepTimestamp);
     adjustTime(adjustment);
-    SPIFFS.begin();
   }
 
   firstBoot = false;

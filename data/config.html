@@ -3,14 +3,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="jquery-3.2.1.min.js"></script>
 <script>
+var dz;
+var aircraft;
+
 $( document ).ready(function() {
   function fillValues() {
     $.getJSON("/getConfig" ).done(function(data) {
       $('#ssid').val(data.ssid);
-      $('#password').val(data.password);      
+      $('#password').val(data.password);
+      dz=data.dz;
+      aircraft=data.aircraft;
+      getDzs();
     });
-  }  
-  fillValues();
+  }
+
+  function getDzs() {
+       $.getJSON("/airports.txt", function(data) {
+           $.each(data, function(index, item) {
+               $('#dz').append(
+                   $('<option></option>').val(item).html(item)
+               );
+           });
+       }).done(function(data) {
+           getAircraft();
+       });
+  }
+
+  function getAircraft() {
+     $.getJSON("/aircraft.txt", function(data) {
+         $.each(data, function(index, item) {
+             $('#aircraft').append(
+                 $('<option></option>').val(item).html(item)
+             );
+         });
+     }).done(function(data) {
+         $("#dz").val(dz).change();
+         $("#aircraft").val(aircraft).change();
+     });
+  }
+  
+  fillValues(); 
   
 });
 
@@ -26,6 +58,14 @@ $( document ).ready(function() {
   <br>
   WIFI Password:<br>
   <input type="text" id="password" name="password" value="">
+  <br>
+  Dropzone:<br>
+  <select id="dz" name="dz"></select>
+  <br>
+  Aircraft:<br>
+  <select id="aircraft" name="aircraft"></select>
+
+  
   <br><br>
   <input type="submit" value="Save">
 </form> 

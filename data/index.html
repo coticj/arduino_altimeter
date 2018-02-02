@@ -9,6 +9,8 @@ $( document ).ready(function() {
       $('#temp').html(data.temp);
       $('#batteryPercentage').html(data.batteryPercentage);
       $('#time').html(data.time);
+      $('#dz').html(data.dz);
+      $('#aircraft').html(data.aircraft);
       setTimeout(updateValues, 3000);
     });
   }
@@ -60,6 +62,9 @@ $( document ).ready(function() {
 <a href="plot.html">Jump charts</a>
 <a href="config.html">Config</a>
 
+<p>DZ: <span id="dz"></span></p>
+
+<p>Aircraft: <span id="aircraft"></span></p>
 
 <p>Temp: <span id="temp"></span></p>
 
