@@ -1,5 +1,4 @@
 ﻿<html>
-   ﻿
 <head>
     <title>Logger</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -119,7 +118,7 @@
                     var readingOffset = readings[j - ofst].split(",");
                     var timeOffset = Number(readingOffset[0]);
                     var altitudeOffset = Number(readingOffset[1]) / 100;
-                    var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 1000 * 3.6;
+                    var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
 
                     time_arr[j] = time;
                     altitide_arr[j] = altitude;
@@ -366,15 +365,28 @@
                     var dateTime = new Date(Number(jumpData[0]) * 1000);
                     var readings = jumpData[1].split(";");
 
-                    s += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
-                    s += "\"readings\": [ ";
+                    var time_arr = new Array(readings.length);
+                    var altitide_arr = new Array(readings.length);
 
                     for (var j = 0; j < readings.length; j++) {
                         var reading = readings[j].split(",");
                         var time = Number(reading[0]);
                         var altitude = Number(reading[1]) / 100;
 
-                        s += "{\"time\": " + time + ", \"altitude\": " + altitude + "}";
+                        time_arr[j] = time;
+                        altitide_arr[j] = altitude;
+                    }
+
+                    var details = getJumpDetails(time_arr, altitide_arr);
+
+                    s += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
+                    s += "\"exitAltitude\": " + details.exitAltitude + ", ";
+                    s += "\"openingAltitude\": " + details.openingAltitude + ", ";
+                    s += "\"freeFallTime\": " + (details.openingTime - details.exitTime) + ", ";
+                    s += "\"readings\": [ ";
+
+                    for (var j = 0; j < readings.length; j++) {
+                        s += "{\"time\": " + time_arr[j] + ", \"altitude\": " + altitide_arr[j] + "}";
                         if (j < readings.length - 1)
                             s += ", ";
                     }
