@@ -7,7 +7,6 @@ void httpServer()
 
   server.on ( "/all", []() {
     time_t t = now();
-    requestedTime = millis();
     String timeNow = String(hour(t)) + ":" + String(minute(t)) + " " + String(day(t)) + "." + String(month(t)) + "." + String(year(t));
     server.send ( 200, "text/plain", "{\"temp\":\"" + String(getTemperature()) + "\",\"batteryPercentage\":\"" + String(getBatteryPercentage()) + "\",\"time\":\"" + timeNow + "\",\"dz\":\"" + String(config.dz) + "\",\"aircraft\":\"" + String(config.aircraft) + "\"}");
   } );

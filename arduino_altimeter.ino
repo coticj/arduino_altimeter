@@ -143,6 +143,7 @@ void setup()
 
       httpServer();
       startServer = true;
+      clientConnected = true;
 
       Serial.println(F("HTTP server started"));
     }
@@ -173,17 +174,17 @@ void setup()
 void loop() {
   unsigned long currentMillis = millis();
 
+  if (currentMillis - requestedTime >= 60 * 1000) {
+    clientConnected = false;    
+  }
+
   if (startServer) {
     server.handleClient();
   }
 
-  if (currentMillis - requestedTime >= 60 * 1000) {
-    clientConnected = false;
-  }
-
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-
+    
     altitude = getAltitude();
 
     // printStatus(); //odkomentiraj za debuging
