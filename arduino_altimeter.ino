@@ -79,7 +79,7 @@ Config config;
 
 void loadConfiguration(Config &config) {
   // Open file for reading
-  File file = SPIFFS.open("/config.txt", "r");
+  File fileConfig = SPIFFS.open("/config.txt", "r");
 
   // Allocate the memory pool on the stack.
   // Don't forget to change the capacity to match your JSON document.
@@ -88,7 +88,7 @@ void loadConfiguration(Config &config) {
   DynamicJsonBuffer jsonBuffer(bufferSize);
 
   // Parse the root object
-  JsonObject &root = jsonBuffer.parseObject(file);
+  JsonObject &root = jsonBuffer.parseObject(fileConfig);
 
   if (!root.success())
     Serial.println(F("Failed to read file, using default configuration"));
@@ -101,7 +101,7 @@ void loadConfiguration(Config &config) {
   strlcpy(config.dz, root["dz"] | "Unknown", sizeof(config.dz));
   strlcpy(config.aircraft, root["aircraft"] | "Unknown", sizeof(config.aircraft));
 
-  file.close();
+  fileConfig.close();
 }
 
 void setup()
@@ -112,13 +112,14 @@ void setup()
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
     while (1);
   }
-
+  
   //printStatus(); // altitude je še 0.00, ker se ga še ne potrebuje
 
   updatePressureHistory();
   ifNoChangeOnGroundStartDeepSleep();
 
   SPIFFS.begin();
+  
   //naloži konfiguracijo
   Serial.println(F("Loading config..."));
   loadConfiguration(config);
@@ -130,12 +131,12 @@ void setup()
 
     int resetCount = 1;
     if (SPIFFS.exists("/reset")) {
-      File f = SPIFFS.open("/reset", "r");
+      File fileReset = SPIFFS.open("/reset", "r");
       String s;
-      while (f.available()) {
-        s += char(f.read());
+      while (fileReset.available()) {
+        s += char(fileReset.read());
       }
-      f.close();
+      fileReset.close();
       resetCount += s.toInt();
     }
 
@@ -312,38 +313,62 @@ bool pressureAltitudeChange() {
 }
 
 void saveLog(int ignoreLastEntries) {
-  // write array to file
-  // open file for writing
-  File f = SPIFFS.open("/log.txt", "a");
-  if (!f) {
-    Serial.println(F("file open failed"));
-  }
-  else {
-    Serial.println(F("====== Writing to SPIFFS file ========="));
+  int id = 0;
 
-    time_t timestamp = now();
-
-    f.print(timestamp);
-    f.print(F("|"));
-    f.print(config.dz);
-    f.print(F("|"));
-    f.print(config.aircraft);
-    f.print(F("|"));
-
-    unsigned long timeFirst = jumpLog[0].time;
-
-    int i = 0;
-    for (i; i <= logIndex - ignoreLastEntries; i++) {
-      float timeRelative = (float)(jumpLog[i].time - timeFirst) / 1000; // milliseconds to seconds
-      f.print(timeRelative * 100);
-      f.print(F(","));
-      f.print(jumpLog[i].altitude * 100);
-      f.print(F(";"));
+  // get last ID, add one
+  if (SPIFFS.exists("/lastId")) {
+    File fileLastId = SPIFFS.open("/lastId", "r");
+    String s;
+    while (fileLastId.available()) {
+      s += char(fileLastId.read());
     }
-    f.println(F(";"));
+    fileLastId.close();
+    id = s.toInt() + 1;
   }
 
-  f.close();
+  Serial.print(F("jump ID:"));
+  Serial.println(id);
+
+  // save basic data to log.txt
+  File fileLog = SPIFFS.open("/log.txt", "a");
+  Serial.println(F("====== Writing to log.txt ========="));
+  time_t timestamp = now();
+  fileLog.print(id);
+  fileLog.print(F("|"));
+  fileLog.print(timestamp);
+  fileLog.print(F("|"));
+  fileLog.print(config.dz);
+  fileLog.print(F("|"));
+  fileLog.print(config.aircraft);
+  fileLog.println(F("||"));
+  fileLog.close();
+
+  // save readings to new file in /logs folder
+  String filename = "/logData_";
+  filename.concat(id);
+  filename.concat(".txt");
+  File fileLogData = SPIFFS.open(filename, "w");
+  String msg = "====== Writing to ";
+  msg.concat(filename);
+  msg.concat(" =========");
+  Serial.println(msg);
+  unsigned long timeFirst = jumpLog[0].time;
+  int i = 0;
+  for (i; i <= logIndex - ignoreLastEntries; i++) {
+    float timeRelative = (float)(jumpLog[i].time - timeFirst) / 1000; // milliseconds to seconds
+    fileLogData.print(timeRelative * 100);
+    fileLogData.print(F(","));
+    fileLogData.print(jumpLog[i].altitude * 100);
+    if (i < (logIndex - ignoreLastEntries)) {
+      fileLogData.print(F(";"));
+    }
+  }
+  fileLogData.close();
+
+  // save new id as last id
+  File fileLastId = SPIFFS.open("/lastId", "w");
+  fileLastId.print(id);
+  fileLastId.close();
 }
 
 void printLog() {
@@ -357,8 +382,6 @@ void printLog() {
       s += char(f.read());
     }
     f.close();
-    int s_end = s.lastIndexOf(",");
-    s.remove(s_end);
     Serial.println(s);
   }
 }

@@ -54,6 +54,8 @@
         var smoothing;
         var windowWidth;
         var lineWidth;
+        var jsonString;
+        var printString;
 
         $(document).ready(function () {
             $.getScript("Chart.min.js")
@@ -63,7 +65,7 @@
                         dataType: "text",
                         success: function (data) {
                             logfile = data;
-                            drawCharts();
+                            plot();
                         }
                     });
                 });
@@ -71,7 +73,6 @@
         });
 
         function init() {
-            input = document.getElementById('input');
             smoothing = document.getElementById('smoothing');
 
             windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
@@ -81,59 +82,74 @@
             onSmoothingChange();
         }
 
-        function drawCharts() {
+        function plot() {
 
             var charts = document.getElementById('charts')
 
             while (charts.firstChild)
                 charts.removeChild(charts.firstChild);
 
-            var jumps = logfile.split(";;");
+            var jumps = logfile.split("||");
 
-            for (var i = jumps.length - 2; i >= 0; i--) {
+            plotAjax(jumps, jumps.length - 2);
+        }
 
-                var jumpNumber = i + 1;
+        function plotAjax(jumps, i) {
+            var jumpNumber = i + 1;
 
-                var canvas = document.createElement("canvas");
-                canvas.id = "chart" + jumpNumber;
-                charts.appendChild(canvas);
-                var div = document.createElement("div");
-                div.id = "div" + jumpNumber;
-                charts.appendChild(div);
+            var canvas = document.createElement("canvas");
+            canvas.id = "chart" + jumpNumber;
+            charts.appendChild(canvas);
+            var div = document.createElement("div");
+            div.id = "div" + jumpNumber;
+            charts.appendChild(div);
 
-                var jump = jumps[i].trim();
-                var jumpData = jump.split("|");
-                var dateTime = new Date(Number(jumpData[0]) * 1000);
-                var location = jumpData[1];
-                var aircraft = jumpData[2];
-                var readings = jumpData[3].split(";");
+            var jump = jumps[i].trim();
+            var jumpData = jump.split("|");
+            var jumpId = jumpData[0];
+            var dateTime = new Date(Number(jumpData[1]) * 1000);
+            var location = jumpData[2];
+            var aircraft = jumpData[3];
 
-                var time_arr = new Array(readings.length);
-                var altitide_arr = new Array(readings.length);
-                var speed_arr = new Array(readings.length);
+            $.ajax({
+                url: "logData_" + jumpId + ".txt",
+                dataType: "text",
+                success: function (data) {
 
-                for (var j = 0; j < readings.length; j++) {
-                    var reading = readings[j].split(",");
-                    var time = Number(reading[0]) / 100;
-                    var altitude = Number(reading[1]) / 100;
-                    var ofst = (offset > j) ? j : offset;
-                    var readingOffset = readings[j - ofst].split(",");
-                    var timeOffset = Number(readingOffset[0]) / 100;
-                    var altitudeOffset = Number(readingOffset[1]) / 100;
-                    var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
+                    var readings = data.split(";");
 
-                    time_arr[j] = time;
-                    altitide_arr[j] = altitude;
-                    speed_arr[j] = speed.toFixed(2);
+                    var time_arr = new Array(readings.length);
+                    var altitide_arr = new Array(readings.length);
+                    var speed_arr = new Array(readings.length);
+
+                    for (var j = 0; j < readings.length; j++) {
+                        var reading = readings[j].split(",");
+                        var time = Number(reading[0]) / 100;
+                        var altitude = Number(reading[1]) / 100;
+                        var ofst = (offset > j) ? j : offset;
+                        var readingOffset = readings[j - ofst].split(",");
+                        var timeOffset = Number(readingOffset[0]) / 100;
+                        var altitudeOffset = Number(readingOffset[1]) / 100;
+                        var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
+
+                        time_arr[j] = time;
+                        altitide_arr[j] = altitude;
+                        speed_arr[j] = speed.toFixed(2);
+                    }
+
+                    var title = "jump " + jumpNumber;
+                    var details = getJumpDetails(time_arr, altitide_arr);
+
+                    drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
+
+                    displayjumpDetails(dateTime, location, aircraft, details, div);
+
+                    --i;
+                    if (i >= 0) {
+                        plotAjax(jumps, i);
+                    }
                 }
-
-                var title = "jump " + jumpNumber;
-                var details = getJumpDetails(time_arr, altitide_arr);
-
-                drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
-
-                displayjumpDetails(dateTime, location, aircraft, details, div);
-            }
+            });
         }
 
         function drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details) {
@@ -350,67 +366,107 @@
                 "Average speed: " + details.averageSpeed + " km/h";
         }
 
-        function convertToJSON() {
+        function convertToJson() {
 
             json = document.getElementById('json');
 
-            var s = "[\n";
+            jsonString = "[\n";
 
-            var jumps = input.value.split(";;");
+            var jumps = logfile.split("||");
 
-            for (var i = 0; i < jumps.length - 1; i++) {
+            convertToJsonAjax(jumps, 0);
+        }
 
-                var jump = jumps[i].trim();
-                var jumpData = jump.split("|");
-                var dateTime = new Date(Number(jumpData[0]) * 1000);
-                var location = jumpData[1];
-                var aircraft = jumpData[2];
-                var readings = jumpData[3].split(";");
+        function convertToJsonAjax(jumps, i) {
+            var jump = jumps[i].trim();
+            var jumpData = jump.split("|");
+            var jumpId = jumpData[0];
+            var dateTime = new Date(Number(jumpData[1]) * 1000);
+            var location = jumpData[2];
+            var aircraft = jumpData[3];
 
-                var time_arr = new Array(readings.length);
-                var altitide_arr = new Array(readings.length);
+            $.ajax({
+                url: "logData_" + jumpId + ".txt",
+                dataType: "text",
+                success: function (data) {
+                    var readings = data.split(";");
 
-                for (var j = 0; j < readings.length; j++) {
-                    var reading = readings[j].split(",");
-                    var time = Number(reading[0]) / 100;
-                    var altitude = Number(reading[1]) / 100;
+                    var time_arr = new Array(readings.length);
+                    var altitide_arr = new Array(readings.length);
 
-                    time_arr[j] = time;
-                    altitide_arr[j] = altitude;
+                    for (var j = 0; j < readings.length; j++) {
+                        var reading = readings[j].split(",");
+                        var time = Number(reading[0]) / 100;
+                        var altitude = Number(reading[1]) / 100;
+
+                        time_arr[j] = time;
+                        altitide_arr[j] = altitude;
+                    }
+
+                    var details = getJumpDetails(time_arr, altitide_arr);
+
+                    jsonString += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
+                    jsonString += "\"location\": \"" + location + "\", ";
+                    jsonString += "\"aircraft\": \"" + aircraft + "\", ";
+                    jsonString += "\"exitAltitude\": " + details.exitAltitude + ", ";
+                    jsonString += "\"openingAltitude\": " + details.openingAltitude + ", ";
+                    jsonString += "\"freeFallTime\": " + (details.openingTime - details.exitTime) + ", ";
+                    jsonString += "\"readings\": [ ";
+
+                    for (var j = 0; j < readings.length; j++) {
+                        jsonString += "{\"time\": " + time_arr[j] + ", \"altitude\": " + altitide_arr[j] + "}";
+                        if (j < readings.length - 1)
+                            jsonString += ", ";
+                    }
+
+                    jsonString += " ] }";
+
+                    ++i;
+                    if (i < jumps.length - 1) {
+                        jsonString += ",\n";
+                        convertToJsonAjax(jumps, i);
+                    }
+                    else {
+                        jsonString += "\n]";
+                        json.innerHTML = jsonString;
+                        jsonString = undefined;
+                    }
                 }
-
-                var details = getJumpDetails(time_arr, altitide_arr);
-
-                s += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
-                s += "\"location\": \"" + location + "\", ";
-                s += "\"aircraft\": \"" + aircraft + "\", ";
-                s += "\"exitAltitude\": " + details.exitAltitude + ", ";
-                s += "\"openingAltitude\": " + details.openingAltitude + ", ";
-                s += "\"freeFallTime\": " + (details.openingTime - details.exitTime) + ", ";
-                s += "\"readings\": [ ";
-
-                for (var j = 0; j < readings.length; j++) {
-                    s += "{\"time\": " + time_arr[j] + ", \"altitude\": " + altitide_arr[j] + "}";
-                    if (j < readings.length - 1)
-                        s += ", ";
-                }
-
-                s += " ] }";
-
-                if (i < jumps.length - 2)
-                    s += ",\n";
-            }
-
-            s += "\n]";
-
-            json.innerHTML = s;
+            });
         }
 
         function printLog() {
 
             json = document.getElementById('json');
 
-            json.innerHTML = logfile;
+            printString = "";
+
+            var jumps = logfile.split("||");
+
+            printLogAjax(jumps, 0);
+        }
+
+        function printLogAjax(jumps, i) {
+            var jump = jumps[i].trim();
+            var jumpData = jump.split("|");
+            var jumpId = jumpData[0];
+
+            $.ajax({
+                url: "logData_" + jumpId + ".txt",
+                dataType: "text",
+                success: function (data) {
+                    printString += jump + "||" + data + "<br>";
+
+                    ++i;
+                    if (i < jumps.length - 1) {
+                        printLogAjax(jumps, i);
+                    }
+                    else {
+                        json.innerHTML = printString;
+                        printString = undefined;
+                    }
+                }
+            });
         }
 
         Date.prototype.toString = function () {
@@ -428,10 +484,10 @@
         <input id="offset" type="text" onchange="onSmoothingChange()" value="10" style="width: 50px" />
         = <span id="smoothing"></span><span style="display: inline-block; width: 20px;">
         </span>
-        <button type="button" onclick="drawCharts()">
+        <button type="button" onclick="plot()">
             Plot charts
         </button>
-        <button type="button" onclick="convertToJSON()">
+        <button type="button" onclick="convertToJson()">
             Convert to JSON
         </button>
         <button type="button" onclick="printLog()">
