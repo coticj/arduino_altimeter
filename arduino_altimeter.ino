@@ -52,6 +52,10 @@ typedef struct
 
 logEntry jumpLog[1200]; // 10 min odčitkov na pol sekunde
 
+bool emulate = false;
+int emulatorAltitude = 4600;
+int emulatorLoopIndex = 0;
+
 RTC_DATA_ATTR double baseline;
 RTC_DATA_ATTR double pressureHistory[11];
 RTC_DATA_ATTR int logIndex = 0;
@@ -107,7 +111,7 @@ void setup()
     while (1);
   }
 
-  // printStatus(); // altitude je še 0.00, ker se ga še ne potrebuje
+  //printStatus(); // altitude je še 0.00, ker se ga še ne potrebuje
 
   updatePressureHistory();
   ifNoChangeOnGroundStartDeepSleep();
@@ -135,6 +139,11 @@ void setup()
 
     Serial.print(F("reset count: "));
     Serial.println(resetCount);
+
+//    if (resetCount == 2) {
+//      emulate = true;
+//      Serial.println(F("Emulator started."));
+//    }
 
     if (resetCount == 4) {
       flashStrip(green, 1, 1000, 0);
@@ -185,7 +194,7 @@ void loop() {
 
     altitude = getAltitude();
 
-    // printStatus(); //odkomentiraj za debuging
+    //printStatus(); //odkomentiraj za debuging
 
     jumpLog[logIndex] = (logEntry) {
       millis(), altitude
@@ -193,6 +202,10 @@ void loop() {
 
     updatePressureHistory();
     ifNoChangeOnGroundStartDeepSleep();
+
+    if (emulate && emulatorAltitude >= 25 && emulatorLoopIndex > 20) {
+      emulatorAltitude -= 50;
+    }
 
     // če še ni prosti pad, vpisuje samo zadnjih 11 meritev
     if (logIndex == 10 &&
@@ -205,6 +218,9 @@ void loop() {
     }
 
     ++logIndex;
+    if (emulate) {
+      ++emulatorLoopIndex;
+    }
 
     // če se dvigne iz tal
     if (interval == intervalGround &&
@@ -221,6 +237,8 @@ void loop() {
       saveLog(30);
 
       logIndex = 0;
+      emulatorLoopIndex = 0;
+      emulatorAltitude = 4600;
       interval = intervalGround;
       flashStrip(orange, 1, 1000);
     }
@@ -296,12 +314,13 @@ void saveLog(int ignoreLastEntries) {
     f.print(F("|"));
 
     unsigned long timeFirst = jumpLog[0].timeMillis;
+
     int i = 0;
     for (i; i <= logIndex - ignoreLastEntries; i++) {
-      unsigned long timeRelative = (jumpLog[i].timeMillis - timeFirst) / 1000; // milliseconds to seconds
-      f.print(timeRelative);
+      float timeRelative = (float)(jumpLog[i].timeMillis - timeFirst) / 1000; // milliseconds to seconds
+      f.print(timeRelative * 100);
       f.print(F(","));
-      f.print(jumpLog[i].altitude);
+      f.print(jumpLog[i].altitude * 100);
       f.print(F(";"));
     }
     f.println(F(";"));
@@ -328,7 +347,12 @@ void printLog() {
 }
 
 double getAltitude() {
-  return bmp.readAltitude(baseline);
+  if (emulate) {
+    return emulatorAltitude;
+  }
+  else {
+    return bmp.readAltitude(baseline);
+  }
 }
 
 double getPressure() {

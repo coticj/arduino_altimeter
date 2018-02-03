@@ -112,11 +112,11 @@
 
                 for (var j = 0; j < readings.length; j++) {
                     var reading = readings[j].split(",");
-                    var time = Number(reading[0]);
+                    var time = Number(reading[0]) / 100;
                     var altitude = Number(reading[1]) / 100;
                     var ofst = (offset > j) ? j : offset;
                     var readingOffset = readings[j - ofst].split(",");
-                    var timeOffset = Number(readingOffset[0]);
+                    var timeOffset = Number(readingOffset[0]) / 100;
                     var altitudeOffset = Number(readingOffset[1]) / 100;
                     var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
 
@@ -284,7 +284,7 @@
 
             var indexOfMaxSpeed = speed_arr.reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
             var indexOfAfterExit;
-            for (var i = indexOfMaxSpeed; i > -1; i--) {
+            for (var i = indexOfMaxSpeed - 1; i > -1; i--) {
                 if (speed_arr[i] < exitSpeedConstant) {
                     indexOfAfterExit = i;
                     break;
@@ -292,8 +292,8 @@
             }
             var indexOfExit = indexOfAfterExit;
             var speedAfterExit = speed_arr[indexOfAfterExit];
-            for (var i = indexOfAfterExit; i > -1; i--) {
-                if (speed_arr[i] <= speedAfterExit) {
+            for (var i = indexOfAfterExit - 1; i > -1; i--) {
+                if (speed_arr[i] < speedAfterExit) {
                     indexOfExit = i;
                     speedAfterExit = speed_arr[i];
                 }
@@ -302,9 +302,9 @@
                 }
             }
             var indexOfOpening;
-            for (var i = indexOfMaxSpeed; i < speed_arr.length; i++) {
+            for (var i = indexOfMaxSpeed + 1; i < speed_arr.length; i++) {
                 if (speed_arr[i] < openingSpeedConstant) {
-                    indexOfOpening = i - offsetConstant;
+                    indexOfOpening = i - (offsetConstant - 1);
                     break;
                 }
             }
@@ -348,59 +348,59 @@
 
             json = document.getElementById('json');
 
-            var isInputJson = input.value.startsWith("[");
+            var s = "[\n";
 
-            if (isInputJson) {
-                json.innerHTML = "No need to convert.";
-            }
-            else {
-                var s = "[\n";
+            var jumps = logfile.split(";;");
 
-                var jumps = input.value.split(";;");
+            for (var i = 0; i < jumps.length - 1; i++) {
 
-                for (var i = 0; i < jumps.length - 1; i++) {
+                var jump = jumps[i].trim();
+                var jumpData = jump.split("|");
+                var dateTime = new Date(Number(jumpData[0]) * 1000);
+                var readings = jumpData[1].split(";");
 
-                    var jump = jumps[i].trim();
-                    var jumpData = jump.split("|");
-                    var dateTime = new Date(Number(jumpData[0]) * 1000);
-                    var readings = jumpData[1].split(";");
+                var time_arr = new Array(readings.length);
+                var altitide_arr = new Array(readings.length);
 
-                    var time_arr = new Array(readings.length);
-                    var altitide_arr = new Array(readings.length);
+                for (var j = 0; j < readings.length; j++) {
+                    var reading = readings[j].split(",");
+                    var time = Number(reading[0]) / 100;
+                    var altitude = Number(reading[1]) / 100;
 
-                    for (var j = 0; j < readings.length; j++) {
-                        var reading = readings[j].split(",");
-                        var time = Number(reading[0]);
-                        var altitude = Number(reading[1]) / 100;
-
-                        time_arr[j] = time;
-                        altitide_arr[j] = altitude;
-                    }
-
-                    var details = getJumpDetails(time_arr, altitide_arr);
-
-                    s += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
-                    s += "\"exitAltitude\": " + details.exitAltitude + ", ";
-                    s += "\"openingAltitude\": " + details.openingAltitude + ", ";
-                    s += "\"freeFallTime\": " + (details.openingTime - details.exitTime) + ", ";
-                    s += "\"readings\": [ ";
-
-                    for (var j = 0; j < readings.length; j++) {
-                        s += "{\"time\": " + time_arr[j] + ", \"altitude\": " + altitide_arr[j] + "}";
-                        if (j < readings.length - 1)
-                            s += ", ";
-                    }
-
-                    s += " ] }";
-
-                    if (i < jumps.length - 2)
-                        s += ",\n";
+                    time_arr[j] = time;
+                    altitide_arr[j] = altitude;
                 }
 
-                s += "\n]";
+                var details = getJumpDetails(time_arr, altitide_arr);
 
-                json.innerHTML = s;
+                s += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
+                s += "\"exitAltitude\": " + details.exitAltitude + ", ";
+                s += "\"openingAltitude\": " + details.openingAltitude + ", ";
+                s += "\"freeFallTime\": " + (details.openingTime - details.exitTime) + ", ";
+                s += "\"readings\": [ ";
+
+                for (var j = 0; j < readings.length; j++) {
+                    s += "{\"time\": " + time_arr[j] + ", \"altitude\": " + altitide_arr[j] + "}";
+                    if (j < readings.length - 1)
+                        s += ", ";
+                }
+
+                s += " ] }";
+
+                if (i < jumps.length - 2)
+                    s += ",\n";
             }
+
+            s += "\n]";
+
+            json.innerHTML = s;
+        }
+
+        function printLog() {
+
+            json = document.getElementById('json');
+
+            json.innerHTML = logfile;
         }
 
         Date.prototype.toString = function () {
@@ -410,7 +410,6 @@
                 this.getUTCHours() + ":" + this.getUTCMinutes()
             );
         }
-
     </script>
 </head>
 <body onload="init()">
@@ -422,7 +421,14 @@
         <button type="button" onclick="drawCharts()">
             Plot charts
         </button>
+        <button type="button" onclick="convertToJSON()">
+            Convert to JSON
+        </button>
+        <button type="button" onclick="printLog()">
+            Print log
+        </button>
     </div>
+    <pre id="json">   </pre>
     <div id="charts">
     </div>
 </body>
