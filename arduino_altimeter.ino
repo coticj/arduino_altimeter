@@ -142,11 +142,6 @@ void setup()
     Serial.print(F("reset count: "));
     Serial.println(resetCount);
 
-    if (resetCount == 3) {
-      emulate = true;
-      Serial.println(F("Emulator started."));
-    }
-
     if (resetCount == 4) {
       flashStrip(green, 1, 1000, 0);
 
@@ -166,7 +161,16 @@ void setup()
       File f = SPIFFS.open("/reset", "w");
       f.print(resetCount);
       f.close();
-      flashStrip(orange, 1, 2000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+
+      uint32_t flashColor = orange;
+
+      if (resetCount == 3) {
+        emulate = true;
+        flashColor = red;
+        Serial.println(F("Emulator started."));
+      }
+
+      flashStrip(flashColor, 1, 2000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
     }
     SPIFFS.remove("/reset");
 
