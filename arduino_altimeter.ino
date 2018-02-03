@@ -53,6 +53,8 @@ RTC_DATA_ATTR bool firstBoot = true;
 RTC_DATA_ATTR time_t sleepTimestamp;
 
 bool startServer = false;
+bool clientConnected = false;
+time_t requestedTime = 0;
 const char* host = "alti";
 
 // Configuration that we'll store on disk
@@ -174,6 +176,11 @@ void loop() {
   if (startServer) {
     server.handleClient();
   }
+
+  if (currentMillis - requestedTime >= 60 * 1000) {
+    clientConnected = false;
+  }
+
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
 
@@ -255,7 +262,7 @@ void ifNoChangeOnGroundStartDeepSleep() {
   // če je na tleh in ni spremembe v zadnjih 10 zapisih, popravi baseline
   if (interval == intervalGround &&
       logIndex >= 10 &&
-      !pressureAltitudeChange()) {
+      !pressureAltitudeChange() && !clientConnected) {
     baseline = pressureHistory[logIndex - 10];
     logIndex = 10;
     esp_sleep_enable_timer_wakeup(intervalGround * 1000); // milliseconds to microseconds

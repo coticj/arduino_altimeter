@@ -7,6 +7,7 @@ void httpServer()
 
   server.on ( "/all", []() {
     time_t t = now();
+    requestedTime = millis();
     String timeNow = String(hour(t)) + ":" + String(minute(t)) + " " + String(day(t)) + "." + String(month(t)) + "." + String(year(t));
     server.send ( 200, "text/plain", "{\"temp\":\"" + String(getTemperature()) + "\",\"batteryPercentage\":\"" + String(getBatteryPercentage()) + "\",\"time\":\"" + timeNow + "\",\"dz\":\"" + String(config.dz) + "\",\"aircraft\":\"" + String(config.aircraft) + "\"}");
   } );
@@ -18,22 +19,26 @@ void httpServer()
     flashStrip(blue, 4, 200);
     flashStrip(white, 4, 200);
     flashStrip(orange, 4, 200);
+    requestedTime = millis();
   } );
 
   server.on("/time", []() {
     if (server.hasArg("time")) {
       setTime(server.arg("time").toInt());
       server.send(200, "text/html", "Time was set");
+      requestedTime = millis();
     }
   });
 
   server.on("/clearLogs", []() {
     SPIFFS.remove("/log.txt");
     server.send(200, "text/html", "Logs were cleared.");
+    requestedTime = millis();
   });
 
   server.on ( "/getConfig", []() {
     server.send ( 200, "text/plain", "{\"ssid\":\"" + String(config.ssid) + "\",\"password\":\"" + String(config.password) + "\",\"dz\":\"" + String(config.dz) + "\",\"aircraft\":\"" + String(config.aircraft) + "\"}");
+    requestedTime = millis();
   } );
 
   server.on ( "/updateConfig", []() {
@@ -41,11 +46,14 @@ void httpServer()
     loadConfiguration(config);
     server.sendHeader("Location", "/");
     server.send(301);
+    requestedTime = millis();
   } );
 
   server.onNotFound([]() {
-    if (!handleFileRead(server.uri()))
+    if (!handleFileRead(server.uri())) {
       server.send(404, "text/plain", "FileNotFound");
+      requestedTime = millis();
+    }
   });
 
   MDNS.begin(host);
