@@ -175,7 +175,7 @@ void loop() {
   unsigned long currentMillis = millis();
 
   if (currentMillis - requestedTime >= 60 * 1000) {
-    clientConnected = false;    
+    clientConnected = false;
   }
 
   if (startServer) {
@@ -184,7 +184,7 @@ void loop() {
 
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-    
+
     altitude = getAltitude();
 
     // printStatus(); //odkomentiraj za debuging
@@ -263,7 +263,8 @@ void ifNoChangeOnGroundStartDeepSleep() {
   // če je na tleh in ni spremembe v zadnjih 10 zapisih, popravi baseline
   if (interval == intervalGround &&
       logIndex >= 10 &&
-      !pressureAltitudeChange() && !clientConnected) {
+      !pressureAltitudeChange() &&
+      !clientConnected) {
     baseline = pressureHistory[logIndex - 10];
     logIndex = 10;
     esp_sleep_enable_timer_wakeup(intervalGround * 1000); // milliseconds to microseconds
