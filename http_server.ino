@@ -63,8 +63,7 @@ void httpServer()
 //save config
 void saveConfiguration(String ssid, String password, String dz, String aircraft) {
   // Delete existing file, otherwise the configuration is appended to the file
-  SPIFFS.remove("/config.txt");
-
+  SPIFFS.remove("/config.txt"); 
   // Open file for writing
   File file = SPIFFS.open("/config.txt", "w");
   const size_t bufferSize = JSON_OBJECT_SIZE(4) + 100;

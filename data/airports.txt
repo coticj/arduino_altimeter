@@ -30,7 +30,7 @@
    "San Stino",
    "Sebastian",
    "Siofok",
-   "Sentvid pr Sticni",
+   "Sentvid pri Sticni",
    "Udine",
    "Vrsar",
    "Zagreb",
