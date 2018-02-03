@@ -43,8 +43,14 @@ void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = 
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 
 double altitude;
-double altitudeLog[1200]; // 10 min odčitkov na pol sekunde
-unsigned long timeLog[1200]; // 10 min odčitkov na pol sekunde
+
+typedef struct
+{
+  unsigned long timeMillis;
+  double altitude;
+}  logEntry;
+
+logEntry jumpLog[1200]; // 10 min odčitkov na pol sekunde
 
 RTC_DATA_ATTR double baseline;
 RTC_DATA_ATTR double pressureHistory[11];
@@ -181,19 +187,19 @@ void loop() {
 
     // printStatus(); //odkomentiraj za debuging
 
-    altitudeLog[logIndex] = altitude;
-    timeLog[logIndex] = millis();
+    jumpLog[logIndex] = (logEntry) {
+      millis(), altitude
+    };
 
     updatePressureHistory();
     ifNoChangeOnGroundStartDeepSleep();
 
     // če še ni prosti pad, vpisuje samo zadnjih 11 meritev
     if (logIndex == 10 &&
-        (altitudeLog[logIndex - 10] - altitudeLog[logIndex]) < 50) {
+        (jumpLog[logIndex - 10].altitude - jumpLog[logIndex].altitude) < 50) {
       int i = 0;
       for (i; i < 10; i++) {
-        altitudeLog[i] = altitudeLog[i + 1];
-        timeLog[i] = timeLog[i + 1];
+        jumpLog[i] = jumpLog[i + 1];
       }
       --logIndex;
     }
@@ -265,7 +271,7 @@ void ifNoChangeOnGroundStartDeepSleep() {
 }
 
 bool altitudeChange(int offset) {
-  double delta = altitudeLog[logIndex] - altitudeLog[logIndex - offset];
+  double delta = jumpLog[logIndex].altitude - jumpLog[logIndex - offset].altitude;
   return (delta < -2 || delta > 2);
 }
 
@@ -289,13 +295,13 @@ void saveLog(int ignoreLastEntries) {
     f.print(timestamp);
     f.print(F("|"));
 
-    unsigned long timeFirst = timeLog[0];
+    unsigned long timeFirst = jumpLog[0].timeMillis;
     int i = 0;
     for (i; i <= logIndex - ignoreLastEntries; i++) {
-      unsigned long timeRelative = (timeLog[i] - timeFirst) / 1000; // milliseconds to seconds
+      unsigned long timeRelative = (jumpLog[i].timeMillis - timeFirst) / 1000; // milliseconds to seconds
       f.print(timeRelative);
       f.print(F(","));
-      f.print(altitudeLog[i]);
+      f.print(jumpLog[i].altitude);
       f.print(F(";"));
     }
     f.println(F(";"));
