@@ -46,7 +46,7 @@ double altitude;
 
 typedef struct
 {
-  unsigned long timeMillis;
+  unsigned long time;
   double altitude;
 }  logEntry;
 
@@ -142,10 +142,10 @@ void setup()
     Serial.print(F("reset count: "));
     Serial.println(resetCount);
 
-//    if (resetCount == 2) {
-//      emulate = true;
-//      Serial.println(F("Emulator started."));
-//    }
+    if (resetCount == 3) {
+      emulate = true;
+      Serial.println(F("Emulator started."));
+    }
 
     if (resetCount == 4) {
       flashStrip(green, 1, 1000, 0);
@@ -321,12 +321,16 @@ void saveLog(int ignoreLastEntries) {
 
     f.print(timestamp);
     f.print(F("|"));
+    f.print(config.dz);
+    f.print(F("|"));
+    f.print(config.aircraft);
+    f.print(F("|"));
 
-    unsigned long timeFirst = jumpLog[0].timeMillis;
+    unsigned long timeFirst = jumpLog[0].time;
 
     int i = 0;
     for (i; i <= logIndex - ignoreLastEntries; i++) {
-      float timeRelative = (float)(jumpLog[i].timeMillis - timeFirst) / 1000; // milliseconds to seconds
+      float timeRelative = (float)(jumpLog[i].time - timeFirst) / 1000; // milliseconds to seconds
       f.print(timeRelative * 100);
       f.print(F(","));
       f.print(jumpLog[i].altitude * 100);

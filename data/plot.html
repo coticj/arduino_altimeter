@@ -104,7 +104,9 @@
                 var jump = jumps[i].trim();
                 var jumpData = jump.split("|");
                 var dateTime = new Date(Number(jumpData[0]) * 1000);
-                var readings = jumpData[1].split(";");
+                var location = jumpData[1];
+                var aircraft = jumpData[2];
+                var readings = jumpData[3].split(";");
 
                 var time_arr = new Array(readings.length);
                 var altitide_arr = new Array(readings.length);
@@ -130,7 +132,7 @@
 
                 drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
 
-                displayjumpDetails(dateTime, details, div);
+                displayjumpDetails(dateTime, location, aircraft, details, div);
             }
         }
 
@@ -324,8 +326,12 @@
             return details;
         }
 
-        function displayjumpDetails(dateTime, details, div) {
+        function displayjumpDetails(dateTime, location, aircraft, details, div) {
             div.innerHTML = "Date and time of jump: " + dateTime.toString() +
+                "<br>" +
+                "Location: " + location +
+                "<br>" +
+                "Aircraft: " + aircraft +
                 "<br>" +
                 "Exit altitude: " + details.exitAltitude + " m" +
                 " " +
@@ -335,7 +341,7 @@
                 " " +
                 "(at " + details.openingTime + " s)" +
                 "<br>" +
-                "Freefal time: " + (details.openingTime - details.exitTime) + " s" +
+                "Freefall time: " + (details.openingTime - details.exitTime) + " s" +
                 "<br>" +
                 "Max speed (5 sec avg): " + details.maxSpeed + " km/h" +
                 " " +
@@ -350,14 +356,16 @@
 
             var s = "[\n";
 
-            var jumps = logfile.split(";;");
+            var jumps = input.value.split(";;");
 
             for (var i = 0; i < jumps.length - 1; i++) {
 
                 var jump = jumps[i].trim();
                 var jumpData = jump.split("|");
                 var dateTime = new Date(Number(jumpData[0]) * 1000);
-                var readings = jumpData[1].split(";");
+                var location = jumpData[1];
+                var aircraft = jumpData[2];
+                var readings = jumpData[3].split(";");
 
                 var time_arr = new Array(readings.length);
                 var altitide_arr = new Array(readings.length);
@@ -374,6 +382,8 @@
                 var details = getJumpDetails(time_arr, altitide_arr);
 
                 s += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
+                s += "\"location\": \"" + location + "\", ";
+                s += "\"aircraft\": \"" + aircraft + "\", ";
                 s += "\"exitAltitude\": " + details.exitAltitude + ", ";
                 s += "\"openingAltitude\": " + details.openingAltitude + ", ";
                 s += "\"freeFallTime\": " + (details.openingTime - details.exitTime) + ", ";
@@ -428,8 +438,7 @@
             Print log
         </button>
     </div>
-    <pre id="json">   </pre>
-    <div id="charts">
-    </div>
+    <pre id="json"></pre>
+    <div id="charts"></div>
 </body>
 </html>
