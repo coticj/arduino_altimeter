@@ -123,10 +123,11 @@ void setup()
   Serial.println(F("Loading config ..."));
   loadConfiguration(config);
 
-  long adjustment = intervalGround / 1000;
-
-  setTime(sleepTimestamp);
-  adjustTime(adjustment);
+  if (!firstBoot) {
+    long adjustment = intervalGround / 1000;
+    setTime(sleepTimestamp);
+    adjustTime(adjustment);
+  }
 
   updatePressureHistory();
   ifNoChangeOnGroundStartDeepSleep();
