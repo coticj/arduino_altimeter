@@ -349,11 +349,11 @@
                 "<br>" +
                 "Aircraft: " + aircraft +
                 "<br>" +
-                "Exit altitude: " + details.exitAltitude + " m" +
+                "Exit altitude: " + details.exitAltitude.toFixed(2) + " m" +
                 " " +
                 "(at " + details.exitTime + " s)" +
                 "<br>" +
-                "Opening altitude: " + details.openingAltitude + " m" +
+                "Opening altitude: " + details.openingAltitude.toFixed(2) + " m" +
                 " " +
                 "(at " + details.openingTime + " s)" +
                 "<br>" +
@@ -369,6 +369,8 @@
         function convertToJson() {
 
             json = document.getElementById('json');
+
+            json.innerHTML = "Reading log ...";
 
             jsonString = "[\n";
 
@@ -438,6 +440,8 @@
         function printLog() {
 
             json = document.getElementById('json');
+
+            json.innerHTML = "Reading log ...";
 
             printString = "";
 

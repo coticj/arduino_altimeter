@@ -39,6 +39,8 @@ const long intervalOffGround = 500;           // interval at which to measure (m
 
 long interval = intervalGround;
 
+const int serverActiveAfterLastRequest = 60;  // seconds
+
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 
@@ -60,7 +62,7 @@ RTC_DATA_ATTR double baseline;
 RTC_DATA_ATTR double pressureHistory[11];
 RTC_DATA_ATTR int logIndex = 0;
 RTC_DATA_ATTR bool firstBoot = true;
-RTC_DATA_ATTR time_t sleepTimestamp;
+RTC_DATA_ATTR time_t sleepTimestamp = 0;
 
 bool startServer = false;
 bool clientConnected = false;
@@ -112,23 +114,27 @@ void setup()
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
     while (1);
   }
-  
+
   //printStatus(); // altitude je še 0.00, ker se ga še ne potrebuje
+
+  SPIFFS.begin();
+
+  //naloži konfiguracijo
+  Serial.println(F("Loading config ..."));
+  loadConfiguration(config);
+
+  long adjustment = intervalGround / 1000;
+
+  setTime(sleepTimestamp);
+  adjustTime(adjustment);
 
   updatePressureHistory();
   ifNoChangeOnGroundStartDeepSleep();
 
-  SPIFFS.begin();
-  
-  //naloži konfiguracijo
-  Serial.println(F("Loading config..."));
-  loadConfiguration(config);
+  strip.begin();
+  flashStrip(off, 200, 0); // Initialize all pixels to 'off'
 
   if (firstBoot) {
-
-    strip.begin();
-    flashStrip(off, 200, 0); // Initialize all pixels to 'off'
-
     int resetCount = 1;
     if (SPIFFS.exists("/reset")) {
       File fileReset = SPIFFS.open("/reset", "r");
@@ -180,13 +186,6 @@ void setup()
     flashStrip(blue, 2, 500, 200, 500); // Signal OK
     signalBatteryPercentage();
   }
-  else {
-    strip.begin();
-    flashStrip(off, 200, 0); // Initialize all pixels to 'off'
-    long adjustment = intervalGround / 1000;
-    setTime(sleepTimestamp);
-    adjustTime(adjustment);
-  }
 
   firstBoot = false;
 }
@@ -194,7 +193,7 @@ void setup()
 void loop() {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - requestedTime >= 60 * 1000) {
+  if (currentMillis - requestedTime >= serverActiveAfterLastRequest * 1000) {
     clientConnected = false;
   }
 
