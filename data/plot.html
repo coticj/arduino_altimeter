@@ -14,18 +14,16 @@
             padding: 0;
         }
 
-        textarea {
-            width: 100%;
-            max-width: 100%;
-            min-height: 79px;
-        }
-
         #head {
             left: 0;
             right: 0;
             padding: 10px;
             background-color: #fdf8ea;
         }
+
+            #head > div + div {
+                margin-top: 5px;
+            }
 
         #json, #charts {
             padding: 10px;
@@ -42,6 +40,18 @@
             border-color: #c1c1c1;
             border-width: 0 0 1px 0;
         }
+
+        button {
+            background-color: rgba(51, 102, 204, 0.2);
+            border: 1px solid #3366cc;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+            button.primary {
+                background-color: #3366cc;
+                color: #fff;
+            }
         -->
     </style>
 
@@ -56,6 +66,7 @@
         var lineWidth;
         var jsonString;
         var printString;
+        var ids;
 
         $(document).ready(function () {
             $.getScript("Chart.min.js")
@@ -64,23 +75,25 @@
                         url: "log.txt",
                         dataType: "text",
                         success: function (data) {
+                            smoothing = document.getElementById('smoothing');
+
+                            windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+                            lineWidth = Math.max(windowWidth / 600, 1);
+
+                            offsetInput = document.getElementById('offset');
+                            onSmoothingChange();
+
                             logfile = data;
-                            plot();
+
+                            var qsIds = getParameterByName("i");
+                            if (qsIds) {
+                                ids = qsIds.split("|");
+                                plot();
+                            }
                         }
                     });
                 });
-
         });
-
-        function init() {
-            smoothing = document.getElementById('smoothing');
-
-            windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
-            lineWidth = Math.max(windowWidth / 600, 1);
-
-            offsetInput = document.getElementById('offset');
-            onSmoothingChange();
-        }
 
         function plot() {
 
@@ -95,7 +108,24 @@
         }
 
         function plotAjax(jumps, i) {
+
             var jumpNumber = i + 1;
+
+            var jump = jumps[i].trim();
+            var jumpData = jump.split("|");
+            var id = Number(jumpData[0]);
+
+            if (ids && !ids.includes(id.toString())) {
+                --i;
+                if (i >= 0) {
+                    plotAjax(jumps, i);
+                }
+                return;
+            }
+
+            var dateTime = new Date(Number(jumpData[1]) * 1000);
+            var location = jumpData[2];
+            var aircraft = jumpData[3];
 
             var canvas = document.createElement("canvas");
             canvas.id = "chart" + jumpNumber;
@@ -104,15 +134,8 @@
             div.id = "div" + jumpNumber;
             charts.appendChild(div);
 
-            var jump = jumps[i].trim();
-            var jumpData = jump.split("|");
-            var jumpId = jumpData[0];
-            var dateTime = new Date(Number(jumpData[1]) * 1000);
-            var location = jumpData[2];
-            var aircraft = jumpData[3];
-
             $.ajax({
-                url: "logData_" + jumpId + ".txt",
+                url: "logData_" + id + ".txt",
                 dataType: "text",
                 success: function (data) {
 
@@ -349,11 +372,11 @@
                 "<br>" +
                 "Aircraft: " + aircraft +
                 "<br>" +
-                "Exit altitude: " + details.exitAltitude.toFixed(2) + " m" +
+                "Exit altitude: " + details.exitAltitude + " m" +
                 " " +
                 "(at " + details.exitTime + " s)" +
                 "<br>" +
-                "Opening altitude: " + details.openingAltitude.toFixed(2) + " m" +
+                "Opening altitude: " + details.openingAltitude + " m" +
                 " " +
                 "(at " + details.openingTime + " s)" +
                 "<br>" +
@@ -382,13 +405,27 @@
         function convertToJsonAjax(jumps, i) {
             var jump = jumps[i].trim();
             var jumpData = jump.split("|");
-            var jumpId = jumpData[0];
+            var id = jumpData[0];
+
+            if (ids && !ids.includes(id.toString())) {
+                ++i;
+                if (i < jumps.length - 1) {
+                    convertToJsonAjax(jumps, i);
+                }
+                else {
+                    jsonString += "\n]";
+                    json.innerHTML = jsonString;
+                    jsonString = undefined;
+                }
+                return;
+            }
+
             var dateTime = new Date(Number(jumpData[1]) * 1000);
             var location = jumpData[2];
             var aircraft = jumpData[3];
 
             $.ajax({
-                url: "logData_" + jumpId + ".txt",
+                url: "logData_" + id + ".txt",
                 dataType: "text",
                 success: function (data) {
                     var readings = data.split(";");
@@ -407,7 +444,11 @@
 
                     var details = getJumpDetails(time_arr, altitide_arr);
 
-                    jsonString += "{ \"datetime\": \"" + dateTime.toISOString() + "\", ";
+                    if (jsonString.length > 2)
+                        jsonString += ",\n";
+
+                    jsonString += "{ \"id\": \"" + id + "\", ";
+                    jsonString += "\"datetime\": \"" + dateTime.toISOString() + "\", ";
                     jsonString += "\"location\": \"" + location + "\", ";
                     jsonString += "\"aircraft\": \"" + aircraft + "\", ";
                     jsonString += "\"exitAltitude\": " + details.exitAltitude + ", ";
@@ -425,7 +466,6 @@
 
                     ++i;
                     if (i < jumps.length - 1) {
-                        jsonString += ",\n";
                         convertToJsonAjax(jumps, i);
                     }
                     else {
@@ -480,23 +520,47 @@
                 this.getUTCHours() + ":" + this.getUTCMinutes()
             );
         }
+
+        function getParameterByName(name, url) {
+            if (!url) url = window.location.href;
+            name = name.replace(/[\[\]]/g, "\\$&");
+            var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                results = regex.exec(url);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, " "));
+        }
+
+        function goTo(t) {
+            window.location.href = t;
+        }
     </script>
 </head>
-<body onload="init()">
+<body>
     <div id="head">
-        smoothing:
-        <input id="offset" type="text" onchange="onSmoothingChange()" value="10" style="width: 50px" />
-        = <span id="smoothing"></span><span style="display: inline-block; width: 20px;">
-        </span>
-        <button type="button" onclick="plot()">
-            Plot charts
-        </button>
-        <button type="button" onclick="convertToJson()">
-            Convert to JSON
-        </button>
-        <button type="button" onclick="printLog()">
-            Print log
-        </button>
+        <div>
+            <button type="button" onclick="goTo('index.html')">
+                Start page
+            </button>
+            <button type="button" onclick="goTo('jumps.html')">
+                Jump log
+            </button>
+        </div>
+        <div>
+            smoothing:
+            <input id="offset" type="text" onchange="onSmoothingChange()" value="10" style="width: 50px" />
+            = <span id="smoothing"></span><span style="display: inline-block; width: 20px;">
+            </span>
+            <button type="button" class="primary" onclick="plot()">
+                Plot charts
+            </button>
+            <button type="button" onclick="convertToJson()">
+                Convert to JSON
+            </button>
+            <button type="button" onclick="printLog()">
+                Print log
+            </button>
+        </div>
     </div>
     <pre id="json"></pre>
     <div id="charts"></div>
