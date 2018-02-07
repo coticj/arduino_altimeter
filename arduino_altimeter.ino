@@ -39,7 +39,7 @@ const long intervalOffGround = 500;           // interval at which to measure (m
 
 long interval = intervalGround;
 
-const int serverActiveAfterLastRequest = 60;  // seconds
+const int serverActiveAfterLastRequest = 120;  // seconds
 
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
@@ -73,8 +73,9 @@ const char* host = "alti";
 struct Config {
   char ssid[64];
   char password[64];
-  char dz[64];
+  char location[64];
   char aircraft[64];
+  int lastJump;
 };
 
 Config config;
@@ -97,11 +98,12 @@ void loadConfiguration(Config &config) {
 
   // Copy values from the JsonObject to the Config
   strlcpy(config.ssid,                   // <- destination
-          root["ssid"] | "alti-unset",  // <- source
+          root["ssid"] | "alti-unset",   // <- source
           sizeof(config.ssid));          // <- destination's capacity
   strlcpy(config.password, root["password"] | "altiunset", sizeof(config.password));
-  strlcpy(config.dz, root["dz"] | "Unknown", sizeof(config.dz));
+  strlcpy(config.location, root["location"] | "Unknown", sizeof(config.location));
   strlcpy(config.aircraft, root["aircraft"] | "Unknown", sizeof(config.aircraft));
+  config.lastJump = String(root["lastJump"] | "0").toInt();
 
   fileConfig.close();
 }
@@ -150,7 +152,11 @@ void setup()
     Serial.print(F("reset count: "));
     Serial.println(resetCount);
 
-    if (resetCount == 4) {
+    File f = SPIFFS.open("/reset", "w");
+    f.print(resetCount);
+    f.close();
+
+    if (resetCount == 3) {
       flashStrip(green, 1, 1000, 0);
 
       WiFi.softAP(config.ssid, config.password);
@@ -166,13 +172,9 @@ void setup()
       Serial.println(F("HTTP server started"));
     }
     else {
-      File f = SPIFFS.open("/reset", "w");
-      f.print(resetCount);
-      f.close();
-
       uint32_t flashColor = orange;
 
-      if (resetCount == 3) {
+      if (resetCount == 4) {
         emulate = true;
         flashColor = red;
         Serial.println(F("Emulator started."));
@@ -326,6 +328,9 @@ void saveLog(int ignoreLastEntries) {
     id = s.toInt() + 1;
   }
 
+  ++config.lastJump;
+  saveConfiguration(config.ssid, config.password, config.location, config.aircraft, String(config.lastJump));
+
   Serial.print(F("jump ID:"));
   Serial.println(id);
 
@@ -335,9 +340,11 @@ void saveLog(int ignoreLastEntries) {
   time_t timestamp = now();
   fileLog.print(id);
   fileLog.print(F("|"));
+  fileLog.print(config.lastJump);
+  fileLog.print(F("|"));
   fileLog.print(timestamp);
   fileLog.print(F("|"));
-  fileLog.print(config.dz);
+  fileLog.print(config.location);
   fileLog.print(F("|"));
   fileLog.print(config.aircraft);
   fileLog.println(F("||"));

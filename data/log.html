@@ -1,0 +1,194 @@
+﻿<html>
+<head>
+    <title>Logger</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="-1">
+    <script type="text/javascript" src="jquery-3.2.1.min.js"></script>
+    <script type="text/javascript">
+
+        var logfile;
+        var tableBody;
+        var lastId;
+
+        function getCss() {
+            $.ajax({
+                url: "css.css",
+                dataType: "text",
+                success: function (data) {
+                    $("head").append("<style type='text/css'>" + data + "</style>");
+                    console.log("css.css loaded");
+                    getSvg();
+                }
+            });
+        }
+
+        function getSvg() {
+            $.ajax({
+                url: "defs.svg",
+                dataType: "text",
+                success: function (data) {
+                    $("head").append(data);
+                    console.log("defs.svg loaded");
+                    getFn();
+                }
+            });
+        }
+
+        function getFn() {
+            $.getScript("fn.js").done(function (script, textStatus) {
+                console.log("fn.js loaded");
+                getLog();
+            });
+        }
+
+        function getLog() {
+            $.ajax({
+                cache: false,
+                url: "log.txt",
+                dataType: "text",
+                success: function (data) {
+                    console.log("log.txt loaded");
+                    logfile = data;
+                    tableBody = document.getElementById("tableBody");
+                    fillTable();
+                }
+            });
+        }
+
+        function fillTable() {
+
+            while (tableBody.firstChild)
+                tableBody.removeChild(tableBody.firstChild);
+
+            var jumps = logfile.split("||");
+
+            fillTableAjax(jumps, jumps.length - 2);
+        }
+
+        function fillTableAjax(jumps, i) {
+
+            var jump = jumps[i].trim();
+            var jumpData = jump.split("|");
+            var id = Number(jumpData[0]);
+            var jumpNumber = Number(jumpData[1]);
+            var dateTime = new Date(Number(jumpData[2]) * 1000);
+            var location = jumpData[3];
+            var aircraft = jumpData[4];
+
+            var tr = document.createElement("tr");
+            tr.id = "tr_" + id;
+            tr.onclick = function () {
+                toggleSelected(this.id);
+            };
+            tableBody.appendChild(tr);
+
+            if (!lastId) {
+                lastId = id;
+                tr.classList.add("selected");
+            }
+
+            $.ajax({
+                url: "logData_" + id + ".txt",
+                dataType: "text",
+                success: function (data) {
+
+                    var readings = data.split(";");
+
+                    var time_arr = new Array(readings.length);
+                    var altitide_arr = new Array(readings.length);
+                    var speed_arr = new Array(readings.length);
+
+                    for (var j = 0; j < readings.length; j++) {
+                        var reading = readings[j].split(",");
+                        var time = Number(reading[0]) / 100;
+                        var altitude = Number(reading[1]) / 100;
+
+                        time_arr[j] = time;
+                        altitide_arr[j] = altitude;
+                    }
+
+                    var details = getJumpDetails(time_arr, altitide_arr);
+
+                    tr.innerHTML =
+                        "<td class=\"text-right\">" + jumpNumber.toString() + "</td>" +
+                        "<td>" + dateTime.toString() + "</td>" +
+                        "<td>" + location + "</td>" +
+                        "<td>" + aircraft + "</td>" +
+                        "<td class=\"text-right\">" + Math.round(details.exitAltitude) + " m" + "</td>" +
+                        "<td class=\"text-right\">" + Math.round(details.openingAltitude) + " m" + "</td>" +
+                        "<td class=\"text-right\">" + Math.round(details.openingTime - details.exitTime) + " s" + "</td>" +
+                        //"<td class=\"text-right\">" + Math.round(details.maxSpeed) + " km/h" + "</td>" +
+                        "<td class=\"text-right\">" + Math.round(details.averageSpeed) + " km/h" + "</td>"
+                        ;
+
+                    --i;
+                    if (i >= 0) {
+                        fillTableAjax(jumps, i);
+                    }
+                }
+            });
+        }
+
+        function plotLast() {
+            window.location.href = "plot.html?i=" + lastId;
+        }
+
+        function plotSelected() {
+            var ids = "";
+            for (var i = 0, tr; tr = tableBody.rows[i]; i++) {
+                if (tr.classList.contains("selected"))
+                    ids += tr.id.replace("tr_", "") + "|";
+            }
+
+            if (ids.length) {
+                ids = ids.slice(0, -1);
+                window.location.href = "plot.html?i=" + ids;
+            }
+            else {
+                alert("No jumps selected.");
+            }
+        }
+
+        function toggleSelected(id) {
+            var tr = document.getElementById(id);
+            tr.classList.toggle("selected");
+        }
+
+        $(document).ready(function () {
+            getCss();
+        });
+    </script>
+</head>
+<body>
+    <div id="head">
+        <button type="button" class="icon" onclick="goTo('index.html')">
+            <svg width="25" height="25">
+                <use xlink:href="#icon-home"></use>
+            </svg>
+        </button>
+        <button type="button" class="icon primary" onclick="plotSelected()">
+            <svg width="25" height="25" fill="#fff">
+                <use xlink:href="#icon-chart"></use>
+            </svg>
+        </button>
+    </div>
+    <table class="grid selectable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Date and time</th>
+                <th>Location</th>
+                <th>Aircraft</th>
+                <th>Exit<br />altitude</th>
+                <th>Opening<br />altitude</th>
+                <th>Freefall<br />time</th>
+                <!--<th>Max speed<br />(5 sec avg)</th>-->
+                <th>Average<br />speed</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</body>
+</html>

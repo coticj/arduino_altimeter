@@ -5,57 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="-1">
-    <style type="text/css">
-        <!--
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: small;
-            margin: 0;
-            padding: 0;
-        }
-
-        #head {
-            left: 0;
-            right: 0;
-            padding: 10px;
-            background-color: #fdf8ea;
-        }
-
-            #head > div + div {
-                margin-top: 5px;
-            }
-
-        #json, #charts {
-            padding: 10px;
-        }
-
-        canvas + div {
-            left: 0;
-            right: 0;
-            padding-bottom: 10px;
-            margin: 10px;
-            text-align: center;
-            color: #666;
-            border-style: solid;
-            border-color: #c1c1c1;
-            border-width: 0 0 1px 0;
-        }
-
-        button {
-            background-color: rgba(51, 102, 204, 0.2);
-            border: 1px solid #3366cc;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-            button.primary {
-                background-color: #3366cc;
-                color: #fff;
-            }
-        -->
-    </style>
-
-    <script src="jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="jquery-3.2.1.min.js"></script>
     <script type="text/javascript">
 
         var logfile;
@@ -68,234 +18,66 @@
         var printString;
         var ids;
 
-        $(document).ready(function () {
-            $.getScript("Chart.min.js")
-                .done(function (script, textStatus) {
-                    $.ajax({
-                        url: "log.txt",
-                        dataType: "text",
-                        success: function (data) {
-                            smoothing = document.getElementById('smoothing');
-
-                            windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
-                            lineWidth = Math.max(windowWidth / 600, 1);
-
-                            offsetInput = document.getElementById('offset');
-                            onSmoothingChange();
-
-                            logfile = data;
-
-                            var qsIds = getParameterByName("i");
-                            if (qsIds) {
-                                ids = qsIds.split("|");
-                                plot();
-                            }
-                        }
-                    });
-                });
-        });
-
-        function plot() {
-
-            var charts = document.getElementById('charts')
-
-            while (charts.firstChild)
-                charts.removeChild(charts.firstChild);
-
-            var jumps = logfile.split("||");
-
-            plotAjax(jumps, jumps.length - 2);
-        }
-
-        function plotAjax(jumps, i) {
-
-            var jumpNumber = i + 1;
-
-            var jump = jumps[i].trim();
-            var jumpData = jump.split("|");
-            var id = Number(jumpData[0]);
-
-            if (ids && !ids.includes(id.toString())) {
-                --i;
-                if (i >= 0) {
-                    plotAjax(jumps, i);
-                }
-                return;
-            }
-
-            var dateTime = new Date(Number(jumpData[1]) * 1000);
-            var location = jumpData[2];
-            var aircraft = jumpData[3];
-
-            var canvas = document.createElement("canvas");
-            canvas.id = "chart" + jumpNumber;
-            charts.appendChild(canvas);
-            var div = document.createElement("div");
-            div.id = "div" + jumpNumber;
-            charts.appendChild(div);
-
+        function getCss() {
             $.ajax({
-                url: "logData_" + id + ".txt",
+                url: "css.css",
                 dataType: "text",
                 success: function (data) {
-
-                    var readings = data.split(";");
-
-                    var time_arr = new Array(readings.length);
-                    var altitide_arr = new Array(readings.length);
-                    var speed_arr = new Array(readings.length);
-
-                    for (var j = 0; j < readings.length; j++) {
-                        var reading = readings[j].split(",");
-                        var time = Number(reading[0]) / 100;
-                        var altitude = Number(reading[1]) / 100;
-                        var ofst = (offset > j) ? j : offset;
-                        var readingOffset = readings[j - ofst].split(",");
-                        var timeOffset = Number(readingOffset[0]) / 100;
-                        var altitudeOffset = Number(readingOffset[1]) / 100;
-                        var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
-
-                        time_arr[j] = time;
-                        altitide_arr[j] = altitude;
-                        speed_arr[j] = speed.toFixed(2);
-                    }
-
-                    var title = "jump " + jumpNumber;
-                    var details = getJumpDetails(time_arr, altitide_arr);
-
-                    drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
-
-                    displayjumpDetails(dateTime, location, aircraft, details, div);
-
-                    --i;
-                    if (i >= 0) {
-                        plotAjax(jumps, i);
-                    }
+                    $("head").append("<style type='text/css'>" + data + "</style>");
+                    console.log("css.css loaded");
+                    getSvg();
                 }
             });
         }
 
-        function drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details) {
-            var freefall_arr = new Array(time_arr.length);
+        function getSvg() {
+            $.ajax({
+                url: "defs.svg",
+                dataType: "text",
+                success: function (data) {
+                    $("head").append(data);
+                    console.log("defs.svg loaded");
+                    getFn();
+                }
+            });
+        }
 
-            for (var i = 0; i < time_arr.length; i++) {
-                freefall_arr[i] = (i >= details.indexOfExit && i <= details.indexOfOpening) ? altitide_arr[i] : NaN;
-            }
+        function getFn() {
+            $.getScript("fn.js").done(function (script, textStatus) {
+                console.log("fn.js loaded");
+                getCharts();
+            });
+        }
 
-            var chart = new Chart(canvas, {
-                type: 'line',
+        function getCharts() {
+            $.getScript("Chart.min.js").done(function (script, textStatus) {
+                console.log("Chart.min.js loaded");
+                getLog();
+            });
+        }
 
-                data: {
-                    labels: time_arr,
-                    datasets: [{
-                        label: "Altitude",
-                        borderWidth: lineWidth,
-                        borderColor: '#3366cc',
-                        backgroundColor: 'transparent',
-                        data: altitide_arr,
-                        yAxisID: "y-axis-left",
-                        pointHitRadius: 5
-                    },
-                    {
-                        label: "Speed",
-                        borderWidth: lineWidth,
-                        borderColor: '#dc3912',
-                        backgroundColor: 'transparent',
-                        data: speed_arr,
-                        yAxisID: "y-axis-right",
-                        pointHitRadius: 5
-                    },
-                    {
-                        label: "Freefall",
-                        borderWidth: lineWidth,
-                        borderColor: 'rgba(51, 102, 204, 0.2)',
-                        backgroundColor: 'rgba(51, 102, 204, 0.2)',
-                        data: freefall_arr,
-                        yAxisID: "y-axis-left",
-                        pointHitRadius: 0
-                    }]
-                },
+        function getLog() {
+            $.ajax({
+                cache: false,
+                url: "log.txt",
+                dataType: "text",
+                success: function (data) {
+                    console.log("log.txt loaded");
 
-                options: {
-                    title: {
-                        display: true,
-                        text: title,
-                        fontSize: Math.max(windowWidth / 50, 14)
-                    },
-                    elements: {
-                        point: {
-                            radius: 0
-                        }
-                    },
-                    legend: {
-                        labels: {
-                            boxWidth: 1
-                        }
-                    },
-                    tooltips: {
-                        mode: 'index',
-                        backgroundColor: 'rgba(255,255,255,0.9)',
-                        titleFontColor: '#666',
-                        bodyFontColor: '#666',
-                        footerFontColor: '#666',
-                        borderColor: 'rgba(0,0,0,0.33)',
-                        borderWidth: 1,
-                        displayColors: false,
-                        position: 'nearest',
-                        callbacks: {
-                            title: function (tooltipItems, data) {
-                                var tooltipItem = tooltipItems[0];
-                                return data.labels[tooltipItem.index] + " s";
-                            },
-                            label: function (tooltipItems, data) {
-                                var labelSuffix = tooltipItems.datasetIndex == 0 ? " m" : " km/h";
-                                return data.datasets[tooltipItems.datasetIndex].label + ': ' + tooltipItems.yLabel + labelSuffix;
-                            }
-                        },
-                        filter: function (tooltipItem) {
-                            return tooltipItem.datasetIndex < 2;
-                        }
-                    },
-                    responsive: true,
-                    onResize: function (chart, size) {
-                        windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
-                        lineWidth = Math.max(windowWidth / 600, 1);
-                        chart.data.datasets.forEach(function (dataset) {
-                            dataset.borderWidth = lineWidth;
-                        });
-                        chart.options.title.fontSize = Math.max(windowWidth / 50, 14);
-                    },
-                    scales: {
-                        xAxes: [{
-                            scaleLabel: {
-                                display: true,
-                                labelString: 'Time (s)'
-                            },
-                            ticks: {
-                                maxRotation: 0,
-                                minRotation: 0
-                            }
-                        }],
-                        yAxes: [{
-                            type: "linear",
-                            display: true,
-                            position: "left",
-                            id: "y-axis-left",
-                            scaleLabel: {
-                                display: true,
-                                labelString: 'Altitude (m)'
-                            },
-                        },
-                        {
-                            type: "linear",
-                            display: true,
-                            position: "right",
-                            id: "y-axis-right",
-                            scaleLabel: {
-                                display: true,
-                                labelString: 'Speed (km/h)'
-                            },
-                        }]
+                    smoothing = document.getElementById('smoothing');
+
+                    windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+                    lineWidth = Math.max(windowWidth / 600, 1);
+
+                    offsetInput = document.getElementById('offset');
+                    onSmoothingChange();
+
+                    logfile = data;
+
+                    var qsIds = getParameterByName("i");
+                    if (qsIds) {
+                        ids = qsIds.split("|");
+                        plot(logfile);
                     }
                 }
             });
@@ -304,89 +86,6 @@
         function onSmoothingChange() {
             offset = Number(offsetInput.value);
             smoothing.innerHTML = offset * 0.5 + " sec avg";
-        }
-
-        function getJumpDetails(time_arr, altitide_arr) {
-            var offsetConstant = 10;
-            var exitSpeedConstant = 50;
-            var openingSpeedConstant = 50;
-
-            var speed_arr = new Array(time_arr.length);
-            for (var i = 0; i < time_arr.length; i++) {
-                var time = time_arr[i];
-                var altitude = altitide_arr[i];
-                var ofst = (offsetConstant > i) ? i : offsetConstant;
-                var timeOffset = time_arr[i - ofst];
-                var altitudeOffset = altitide_arr[i - ofst];
-                var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
-
-                speed_arr[i] = isNaN(speed) ? 0 : speed;
-            }
-
-            var indexOfMaxSpeed = speed_arr.reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
-            var indexOfAfterExit;
-            for (var i = indexOfMaxSpeed - 1; i > -1; i--) {
-                if (speed_arr[i] < exitSpeedConstant) {
-                    indexOfAfterExit = i;
-                    break;
-                }
-            }
-            var indexOfExit = indexOfAfterExit;
-            var speedAfterExit = speed_arr[indexOfAfterExit];
-            for (var i = indexOfAfterExit - 1; i > -1; i--) {
-                if (speed_arr[i] < speedAfterExit) {
-                    indexOfExit = i;
-                    speedAfterExit = speed_arr[i];
-                }
-                else {
-                    break;
-                }
-            }
-            var indexOfOpening;
-            for (var i = indexOfMaxSpeed + 1; i < speed_arr.length; i++) {
-                if (speed_arr[i] < openingSpeedConstant) {
-                    indexOfOpening = i - (offsetConstant - 1);
-                    break;
-                }
-            }
-
-            var avgSpeed = ((altitide_arr[indexOfExit] - altitide_arr[indexOfOpening]) / (time_arr[indexOfOpening] - time_arr[indexOfExit])) * 3.6;
-
-            var details = new Object();
-            details.exitAltitude = altitide_arr[indexOfExit];
-            details.exitTime = time_arr[indexOfExit];
-            details.openingAltitude = altitide_arr[indexOfOpening];
-            details.openingTime = time_arr[indexOfOpening];
-            details.maxSpeed = speed_arr[indexOfMaxSpeed].toFixed(2);
-            details.maxSpeedTime = time_arr[indexOfMaxSpeed];
-            details.averageSpeed = avgSpeed.toFixed(2);
-            details.indexOfExit = indexOfExit;
-            details.indexOfOpening = indexOfOpening;
-            return details;
-        }
-
-        function displayjumpDetails(dateTime, location, aircraft, details, div) {
-            div.innerHTML = "Date and time of jump: " + dateTime.toString() +
-                "<br>" +
-                "Location: " + location +
-                "<br>" +
-                "Aircraft: " + aircraft +
-                "<br>" +
-                "Exit altitude: " + details.exitAltitude + " m" +
-                " " +
-                "(at " + details.exitTime + " s)" +
-                "<br>" +
-                "Opening altitude: " + details.openingAltitude + " m" +
-                " " +
-                "(at " + details.openingTime + " s)" +
-                "<br>" +
-                "Freefall time: " + (details.openingTime - details.exitTime) + " s" +
-                "<br>" +
-                "Max speed (5 sec avg): " + details.maxSpeed + " km/h" +
-                " " +
-                "(at " + details.maxSpeedTime + " s)" +
-                "<br>" +
-                "Average speed: " + details.averageSpeed + " km/h";
         }
 
         function convertToJson() {
@@ -513,12 +212,8 @@
             });
         }
 
-        Date.prototype.toString = function () {
-            return (
-                this.getUTCFullYear() + "-" + (this.getUTCMonth() + 1) + "-" + this.getUTCDate() +
-                " " +
-                this.getUTCHours() + ":" + this.getUTCMinutes()
-            );
+        function refresh() {
+            plot(logfile);
         }
 
         function getParameterByName(name, url) {
@@ -531,19 +226,28 @@
             return decodeURIComponent(results[2].replace(/\+/g, " "));
         }
 
-        function goTo(t) {
-            window.location.href = t;
-        }
+        $(document).ready(function () {
+            getCss();
+        });
     </script>
 </head>
 <body>
     <div id="head">
         <div>
-            <button type="button" onclick="goTo('index.html')">
-                Start page
+            <button type="button" class="icon" onclick="goTo('index.html')">
+                <svg width="25" height="25">
+                    <use xlink:href="#icon-home"></use>
+                </svg>
             </button>
-            <button type="button" onclick="goTo('jumps.html')">
-                Jump log
+            <button type="button" class="icon" onclick="goTo('log.html')">
+                <svg width="25" height="25">
+                    <use xlink:href="#icon-book"></use>
+                </svg>
+            </button>
+            <button type="button" class="icon primary" onclick="refresh()">
+                <svg width="25" height="25" fill="#fff">
+                    <use xlink:href="#icon-refresh"></use>
+                </svg>
             </button>
         </div>
         <div>
@@ -551,18 +255,18 @@
             <input id="offset" type="text" onchange="onSmoothingChange()" value="10" style="width: 50px" />
             = <span id="smoothing"></span><span style="display: inline-block; width: 20px;">
             </span>
-            <button type="button" class="primary" onclick="plot()">
-                Plot charts
+            <!--<button type="button" class="icon primary" onclick="plot()">
+               Refresh
             </button>
             <button type="button" onclick="convertToJson()">
                 Convert to JSON
             </button>
             <button type="button" onclick="printLog()">
-                Print log
-            </button>
+                Print entire log
+            </button>-->
         </div>
     </div>
-    <pre id="json"></pre>
+    <!--<pre id="json"></pre>-->
     <div id="charts"></div>
 </body>
 </html>

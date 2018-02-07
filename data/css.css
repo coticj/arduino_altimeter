@@ -1,0 +1,133 @@
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: medium;
+    margin: 0;
+    padding: 0;
+}
+
+input,
+select {
+    font-size: medium;
+}
+
+#head, #foot {
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 10px;
+}
+
+#head {
+    background-color: #fdf8ea;
+}
+
+    #head > div + div {
+        margin-top: 10px;
+    }
+
+
+#json, #charts {
+    padding: 10px;
+}
+
+#foot {
+    border-style: solid;
+    border-color: #9fb3e6;
+    border-width: 1px 0 0 0;
+}
+
+canvas + div {
+    left: 0;
+    right: 0;
+    padding-bottom: 10px;
+    margin: 10px;
+    text-align: center;
+    border-style: solid;
+    border-color: #c1c1c1;
+    border-width: 0 0 1px 0;
+}
+
+    canvas + div table {
+        margin-left: auto;
+        margin-right: auto;
+        font-size: small;
+        color: #666;
+    }
+
+        canvas + div table tr td:first-child {
+            text-align: right;
+        }
+
+th, td {
+    padding: 1px 5px;
+}
+
+table.padded th,
+table.padded td {
+    padding: 6px 5px;
+}
+
+table {
+    margin: 10px;
+    font-size: medium;
+    border-collapse: collapse;
+}
+
+    table.grid,
+    table.grid th,
+    table.grid td {
+        border: 1px solid #9fb3e6;
+    }
+
+th {
+    background-color: #e1e8fa;
+}
+
+table.selectable tr.selected td {
+    color: #fff;
+    background-color: #36c;
+}
+
+table.selectable tbody tr:hover {
+    cursor: pointer;
+}
+
+.text-right {
+    text-align: right;
+}
+
+button {
+    padding: 5px 10px;
+    background-color: rgba(102, 102, 102, 0.2);
+    border: 1px solid rgba(102, 102, 102, 0.5);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: medium;
+}
+
+    button.primary {
+        background-color: #36c;
+        border-color: #325394;
+        color: #fff;
+    }
+
+    button.right {
+        float: right;
+    }
+
+    button.icon {
+        padding: 5px;
+    }
+
+    button + button {
+        margin-left: 5px
+    }
+
+.buttons-vertical button {
+    display: block;
+}
+
+    .buttons-vertical button + button {
+        margin: 10px 0 0 0;
+    }

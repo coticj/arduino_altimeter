@@ -1,17 +1,23 @@
 void httpServer()
 {
-  server.on ( "/restart", []() {
+  server.on("/restart", []() {
     server.send ( 200, "text/plain", "ok");
     ESP.restart();
   } );
 
-  server.on ( "/all", []() {
-    time_t t = now();
-    String timeNow = String(hour(t)) + ":" + String(minute(t)) + " " + String(day(t)) + "." + String(month(t)) + "." + String(year(t));
-    server.send ( 200, "text/plain", "{\"temp\":\"" + String(getTemperature()) + "\",\"batteryPercentage\":\"" + String(getBatteryPercentage()) + "\",\"time\":\"" + timeNow + "\",\"dz\":\"" + String(config.dz) + "\",\"aircraft\":\"" + String(config.aircraft) + "\"}");
-  } );
+  server.on("/all", []() {
+    server.send ( 200, "text/plain",
+                  "{\"temp\":\"" + String(getTemperature()) +
+                  "\",\"battery\":\"" + String(getBatteryPercentage()) +
+                  "\",\"time\":\"" + String(now()) +
+                  "\",\"location\":\"" + String(config.location) +
+                  "\",\"aircraft\":\"" + String(config.aircraft) +
+                  "\",\"lastJump\":\"" + String(config.lastJump) +
+                  "\"}");
+    requestedTime = millis();
+  });
 
-  server.on ( "/test", []() {
+  server.on("/test", []() {
     server.send ( 200, "text/plain", "ok");
     flashStrip(red, 4, 200);
     flashStrip(green, 4, 200);
@@ -19,9 +25,10 @@ void httpServer()
     flashStrip(white, 4, 200);
     flashStrip(orange, 4, 200);
     requestedTime = millis();
-  } );
+  });
 
   server.on("/time", []() {
+    Serial.println(F("wifi: time"));
     if (server.hasArg("time")) {
       setTime(server.arg("time").toInt());
       server.send(200, "text/html", "Time was set");
@@ -31,17 +38,53 @@ void httpServer()
 
   server.on("/clearLogs", []() {
     SPIFFS.remove("/log.txt");
+    SPIFFS.remove("/lastId");
+
+    // get last ID
+    int lastId = 0;
+    if (SPIFFS.exists("/lastId")) {
+      File fileLastId = SPIFFS.open("/lastId", "r");
+      String s;
+      while (fileLastId.available()) {
+        s += char(fileLastId.read());
+      }
+      fileLastId.close();
+      lastId = s.toInt() + 1;
+    }
+
+    // remove
+    int i = 0;
+    for (i; i <= lastId; i++) {
+      String filename = "/logData_";
+      filename.concat(i);
+      filename.concat(".txt");
+      SPIFFS.remove(filename);
+    }
+
     server.send(200, "text/html", "Logs were cleared.");
     requestedTime = millis();
   });
 
-  server.on ( "/getConfig", []() {
-    server.send ( 200, "text/plain", "{\"ssid\":\"" + String(config.ssid) + "\",\"password\":\"" + String(config.password) + "\",\"dz\":\"" + String(config.dz) + "\",\"aircraft\":\"" + String(config.aircraft) + "\"}");
+  server.on("/getConfig", []() {
+    String s =  "{\"ssid\":\"" + String(config.ssid) +
+                "\",\"password\":\"" + String(config.password) +
+                "\",\"location\":\"" + String(config.location) +
+                "\",\"aircraft\":\"" + String(config.aircraft) +
+                "\",\"lastJump\":\"" + String(config.lastJump) +
+                "\"}";
+    server.send (200, "text/plain", s);
     requestedTime = millis();
   } );
 
-  server.on ( "/updateConfig", []() {
-    saveConfiguration(server.arg("ssid"), server.arg("password"), server.arg("dz"), server.arg("aircraft"));
+  server.on("/updateConfig", []() {
+    Serial.println(F("wifi: updateConfig"));
+    String s =  "" + server.arg("ssid") +
+                "" + server.arg("password") +
+                "" +  server.arg("location") +
+                "" +  server.arg("aircraft") +
+                "" +  server.arg("lastJump");
+    Serial.println(s);
+    saveConfiguration(server.arg("ssid"), server.arg("password"), server.arg("location"), server.arg("aircraft"), server.arg("lastJump"));
     loadConfiguration(config);
     server.sendHeader("Location", "/");
     server.send(301);
@@ -57,13 +100,12 @@ void httpServer()
 
   MDNS.begin(host);
   server.begin();
-
 }
 
 //save config
-void saveConfiguration(String ssid, String password, String dz, String aircraft) {
+void saveConfiguration(String ssid, String password, String location, String aircraft, String lastJump) {
   // Delete existing file, otherwise the configuration is appended to the file
-  SPIFFS.remove("/config.txt"); 
+  SPIFFS.remove("/config.txt");
   // Open file for writing
   File file = SPIFFS.open("/config.txt", "w");
   const size_t bufferSize = JSON_OBJECT_SIZE(4) + 100;
@@ -75,8 +117,9 @@ void saveConfiguration(String ssid, String password, String dz, String aircraft)
   // Set the values
   root["ssid"] = ssid;
   root["password"] = password;
-  root["dz"] = dz;
+  root["location"] = location;
   root["aircraft"] = aircraft;
+  root["lastJump"] = lastJump;
 
   // Serialize JSON to file
   if (root.printTo(file) == 0) {
@@ -113,11 +156,15 @@ String getContentType(String filename) {
   else if (filename.endsWith(".pdf")) return "application/x-pdf";
   else if (filename.endsWith(".zip")) return "application/x-zip";
   else if (filename.endsWith(".gz")) return "application/x-gzip";
+  else if (filename.endsWith(".svg")) return "image/svg+xml";
   return "text/plain";
 }
 
 // webserver
 bool handleFileRead(String path) {
+
+  requestedTime = millis();
+
   Serial.println("handleFileRead: " + path);
   if (path.endsWith("/")) path += "index.html";
   String contentType = getContentType(path);

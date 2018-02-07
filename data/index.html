@@ -5,132 +5,115 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="-1">
-    <style type="text/css">
-        <!--
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: small;
-            margin: 0;
-            padding: 0;
+    <script type="text/javascript" src="jquery-3.2.1.min.js"></script>
+    <script type="text/javascript">
+
+        var logfile;
+        var offset = 10;
+        var ids;
+
+        function getCss() {
+            $.ajax({
+                url: "css.css",
+                dataType: "text",
+                success: function (data) {
+                    $("head").append("<style type='text/css'>" + data + "</style>");
+                    console.log("css.css loaded");
+                    getSvg();
+                }
+            });
         }
 
-        #head, #foot {
-            left: 0;
-            right: 0;
-            padding: 10px;
+        function getSvg() {
+            $.ajax({
+                url: "defs.svg",
+                dataType: "text",
+                success: function (data) {
+                    $("head").append(data);
+                    console.log("defs.svg loaded");
+                    getFn();
+                }
+            });
         }
 
-        #head {
-            background-color: #fdf8ea;
+        function getFn() {
+            $.getScript("fn.js").done(function (script, textStatus) {
+                console.log("fn.js loaded");
+                getCharts();
+            });
         }
 
-        #foot {
-            border-style: solid;
-            border-color: #9fb3e6;
-            border-width: 1px 0 0 0;
+        function getCharts() {
+            $.getScript("Chart.min.js").done(function (script, textStatus) {
+                console.log("Chart.min.js loaded");
+                getLog();
+            });
         }
 
-        th, td {
-            padding: 1px 5px 10px 5px;
+        function getLog() {
+            $.ajax({
+                cache: false,
+                url: "log.txt",
+                dataType: "text",
+                success: function (data) {
+                    console.log("log.txt loaded");
+
+                    windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+                    lineWidth = Math.max(windowWidth / 600, 1);
+
+                    logfile = data;
+                    var jumps = logfile.split("\n");
+                    var lastJump = jumps[jumps.length - 1];
+
+                    setTime(lastJump);
+                }
+            });
         }
 
-        table {
-            margin: 10px;
-            font-size: small;
-            border-collapse: collapse;
+        function updateValues() {
+            console.log("updateValues started");
+            $.getJSON("/all").done(function (data) {
+                console.log("/all loaded");
+                $('#time').html((new Date(Number(data.time) * 1000)).toString());
+                $('#location').html(data.location);
+                $('#aircraft').html(data.aircraft);
+                $('#lastJump').html(data.lastJump);
+                $('#battery').html(data.battery);
+                $('#temp').html(data.temp);
+                setTimeout(updateValues, 3000);
+            });
         }
 
-        th {
-            background-color: #e1e8fa;
+        function setTime(lastJump) {
+            var d = new Date();
+            $.post("/time", {
+                time: (Math.round(Date.now() / 1000) - (d.getTimezoneOffset() * 60))
+            }).done(function (data) {
+                console.log("/time loaded");
+            }).always(function (data) {
+                plot(lastJump, updateValues);
+            });
         }
 
-        .text-right {
-            text-align: right;
-        }
-
-        button {
-            background-color: rgba(51, 102, 204, 0.2);
-            border: 1px solid #3366cc;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-            button.primary {
-                background-color: #3366cc;
-                color: #fff;
-            }
-
-        -->
-    </style>
-    <script src="jquery-3.2.1.min.js"></script>
-    <script>
         $(document).ready(function () {
-            function updateValues() {
-                $.getJSON("/all").done(function (data) {
-                    $('#time').html(data.time);
-                    $('#dz').html(data.dz);
-                    $('#aircraft').html(data.aircraft);
-                    $('#batteryPercentage').html(data.batteryPercentage);
-                    $('#temp').html(data.temp);
-                    setTimeout(updateValues, 3000);
-                });
-            }
-
-            function setTime() {
-                var d = new Date();
-                $.post("/time", {
-                    time: (Math.round(Date.now() / 1000) - (d.getTimezoneOffset() * 60))
-                }).done(function (data) {
-                    //alert(data);
-                    updateValues();
-                });
-            }
-
-            setTime();
-
-            $("#test").click(function (e) {
-                e.preventDefault();
-                $.get("/test", function (data) {
-                    alert("LED test was performed.");
-                });
-            });
-
-            $("#restart").click(function (e) {
-                e.preventDefault();
-                $.get("/restart", function (data) {
-                    alert("Restart was performed.");
-                });
-            });
-
-            $("#clearLog").click(function (e) {
-                e.preventDefault();
-                var checkstr = confirm('Are you sure you want to CLEAR logs?');
-                if (checkstr == true) {
-                    $.get("/clearLogs", function (data) {
-                        alert(data);
-                    });
-                }
-                else {
-                    return false;
-                }
-            });
+            getCss();
         });
-
-        function goTo(t) {
-            window.location.href = t;
-        }
     </script>
 </head>
 <body>
     <div id="head">
-        <button type="button" onclick="goTo('jumps.html')">
-            Jump log
+        <button type="button" class="icon primary" onclick="goTo('log.html')">
+            <svg width="25" height="25" fill="#fff">
+                <use xlink:href="#icon-book"></use>
+            </svg>
         </button>
-        <button type="button" onclick="goTo('config.html')">
-            Config
+        <button type="button" class="icon right" onclick="goTo('config.html')">
+            <svg width="25" height="25" fill="#000">
+                <use xlink:href="#icon-cog"></use>
+            </svg>
         </button>
     </div>
-    <table>
+    <table class="padded">
         <tbody>
             <tr>
                 <td><b>Date and time:</b></td>
@@ -138,26 +121,27 @@
             </tr>
             <tr>
                 <td><b>Location:</b></td>
-                <td><span id="dz"></span></td>
+                <td><span id="location"></span></td>
             </tr>
             <tr>
                 <td><b>Aircraft:</b></td>
                 <td><span id="aircraft"></span></td>
             </tr>
             <tr>
-                <td><b>Battery %:</b></td>
-                <td><span id="batteryPercentage"></span></td>
+                <td><b>Last jump:</b></td>
+                <td><span id="lastJump"></span></td>
+            </tr>
+            <tr>
+                <td><b>Battery:</b></td>
+                <td><span id="battery"></span> %</td>
             </tr>
             <tr>
                 <td><b>Temperature:</b></td>
-                <td><span id="temp"></span></td>
+                <td><span id="temp"></span> °C</td>
             </tr>
         </tbody>
     </table>
-    <div id="foot">
-        <button type="button" id="test">Test LEDs</button>
-        <button type="button" id="restart">Restart logger</button>
-        <button type="button" id="clearLog">Clear log</button>
-    </div>
+    <div id="foot"></div>
+    <div id="charts"></div>
 </body>
 </html>

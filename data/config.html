@@ -5,122 +5,124 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="-1">
-    <style type="text/css">
-        <!--
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: small;
-            margin: 0;
-            padding: 0;
+    <script type="text/javascript" src="jquery-3.2.1.min.js"></script>
+    <script type="text/javascript">
+
+        function getCss() {
+            $.ajax({
+                url: "css.css",
+                dataType: "text",
+                success: function (data) {
+                    $("head").append("<style type='text/css'>" + data + "</style>");
+                    console.log("css.css loaded");
+                    getSvg();
+                }
+            });
         }
 
-        #head, #foot {
-            left: 0;
-            right: 0;
-            padding: 10px;
+        function getSvg() {
+            $.ajax({
+                url: "defs.svg",
+                dataType: "text",
+                success: function (data) {
+                    $("head").append(data);
+                    console.log("defs.svg loaded");
+                    getFn();
+                }
+            });
         }
 
-        #head {
-            background-color: #fdf8ea;
+        function getFn() {
+            $.getScript("fn.js").done(function (script, textStatus) {
+                console.log("fn.js loaded");
+                getLocation();
+            });
         }
 
-        #foot {
-            border-style: solid;
-            border-color: #9fb3e6;
-            border-width: 1px 0 0 0;
-        }
-
-        th, td {
-            padding: 1px 5px 10px 5px;
-        }
-
-        table {
-            margin: 10px;
-            font-size: small;
-            border-collapse: collapse;
-        }
-
-        th {
-            background-color: #e1e8fa;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        button {
-            background-color: rgba(51, 102, 204, 0.2);
-            border: 1px solid #3366cc;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-            button.primary {
-                background-color: #3366cc;
-                color: #fff;
-            }
-        -->
-    </style>
-    <script src="jquery-3.2.1.min.js"></script>
-    <script>
-        var dz;
-        var aircraft;
-
-        $(document).ready(function () {
-            function fillValues() {
-                $.getJSON("/getConfig").done(function (data) {
-                    $('#ssid').val(data.ssid);
-                    $('#password').val(data.password);
-                    dz = data.dz;
-                    aircraft = data.aircraft;
-                    getDzs();
+        function getLocation() {
+            $.getJSON("location.txt", function (data) {
+                console.log("location.txt loaded");
+                $.each(data, function (index, item) {
+                    $('#location').append(
+                        $('<option></option>').val(item).html(item)
+                    );
                 });
-            }
+            }).done(function (data) {
+                getAircraft();
+            });
+        }
 
-            function getDzs() {
-                $.getJSON("/airports.txt", function (data) {
-                    $.each(data, function (index, item) {
-                        $('#dz').append(
-                            $('<option></option>').val(item).html(item)
-                        );
-                    });
-                }).done(function (data) {
-                    getAircraft();
+        function getAircraft() {
+            $.getJSON("aircraft.txt", function (data) {
+                console.log("aircraft.txt loaded");
+                $.each(data, function (index, item) {
+                    $('#aircraft').append(
+                        $('<option></option>').val(item).html(item)
+                    );
                 });
-            }
+            }).done(function (data) {
+                fillValues();
+            });
+        }
 
-            function getAircraft() {
-                $.getJSON("/aircraft.txt", function (data) {
-                    $.each(data, function (index, item) {
-                        $('#aircraft').append(
-                            $('<option></option>').val(item).html(item)
-                        );
-                    });
-                }).done(function (data) {
-                    $("#dz").val(dz).change();
-                    $("#aircraft").val(aircraft).change();
-                });
-            }
+        function fillValues() {
+            $.getJSON("/getConfig").done(function (data) {
+                console.log("/getConfig loaded");
+                $('#ssid').val(data.ssid);
+                $('#password').val(data.password);
+                $('#lastJump').val(data.lastJump);
+                $("#location").val(data.location).change();
+                $("#aircraft").val(data.aircraft).change();
+            });
+        }
 
-            fillValues();
+        $("#test").click(function (e) {
+            e.preventDefault();
+            $.get("/test", function (data) {
+                alert("LED test was performed.");
+            });
         });
 
-        function goTo(t) {
-            window.location.href = t;
-        }
+        $("#restart").click(function (e) {
+            e.preventDefault();
+            $.get("/restart", function (data) {
+                alert("Restart was performed.");
+            });
+        });
+
+        $("#clearLog").click(function (e) {
+            e.preventDefault();
+            var checkstr = confirm('Are you sure you want to clear the log?');
+            if (checkstr == true) {
+                $.get("/clearLogs", function (data) {
+                    alert(data);
+                });
+            }
+            else {
+                return false;
+            }
+        });
+
+        $(document).ready(function () {
+            getCss();
+        });
     </script>
 </head>
 <body>
     <div id="head">
-        <button type="button" onclick="goTo('index.html')">
-            Start page
+        <button type="button" class="icon" onclick="goTo('index.html')">
+            <svg width="25" height="25">
+                <use xlink:href="#icon-home"></use>
+            </svg>
         </button>
-        <button type="button" onclick="goTo('jumps.html')">
-            Jump log
+        <button type="button" class="icon" onclick="goTo('log.html')">
+            <svg width="25" height="25">
+                <use xlink:href="#icon-book"></use>
+            </svg>
         </button>
     </div>
     <form action="/updateConfig" method="post">
-        <table>
+        <table class="padded">
             <tr>
                 <td>
                     <b>SSID:</b>
@@ -142,7 +144,7 @@
                     <b>Location:</b>
                 </td>
                 <td>
-                    <select id="dz" name="dz"></select>
+                    <select id="location" name="location"></select>
                 </td>
             </tr>
             <tr>
@@ -151,6 +153,14 @@
                 </td>
                 <td>
                     <select id="aircraft" name="aircraft"></select>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <b>Last jump:</b>
+                </td>
+                <td>
+                    <input type="number" id="lastJump" name="lastJump" value="">
                 </td>
             </tr>
 
@@ -163,7 +173,11 @@
         </table>
     </form>
     <div id="foot">
-        All changes will be applied after next restart of the logger.
+        <div class="buttons-vertical">
+            <button type="button" id="test">Test LED strip</button>
+            <button type="button" id="restart">Restart logger</button>
+            <button type="button" id="clearLog">Clear log</button>
+        </div>
     </div>
 </body>
 </html>
