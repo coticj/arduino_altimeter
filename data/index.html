@@ -39,7 +39,37 @@
         function getFn() {
             $.getScript("fn.js").done(function (script, textStatus) {
                 console.log("fn.js loaded");
-                getCharts();
+                setTime();
+            });
+        }
+
+        function setTime() {
+            var d = new Date();
+            $.post("/time", {
+                time: (Math.round(Date.now() / 1000) - (d.getTimezoneOffset() * 60))
+            }).done(function (data) {
+                console.log("/time posted");
+            }).always(function (data) {
+                getConfig(false);
+            });
+        }
+
+        function getConfig(loop) {
+            $.getJSON("/all").done(function (data) {
+                console.log("/all loaded");
+                $('#time').html((new Date(Number(data.time) * 1000)).toString());
+                $('#location').html(data.location);
+                $('#aircraft').html(data.aircraft);
+                $('#lastJump').html(data.lastJump);
+                $('#battery').html(data.battery);
+                $('#temp').html(data.temp);
+            }).always(function (data) {
+                if (loop)
+                    setTimeout(function () {
+                        getConfig(true);
+                    }, 3000);
+                else
+                    getCharts();
             });
         }
 
@@ -65,53 +95,45 @@
                     var jumps = logfile.split("\n");
                     var lastJump = jumps[jumps.length - 1];
 
-                    setTime(lastJump);
+                    plot(lastJump, function () {
+                        getConfig(true);
+                    });
                 }
-            });
-        }
-
-        function updateValues() {
-            console.log("updateValues started");
-            $.getJSON("/all").done(function (data) {
-                console.log("/all loaded");
-                $('#time').html((new Date(Number(data.time) * 1000)).toString());
-                $('#location').html(data.location);
-                $('#aircraft').html(data.aircraft);
-                $('#lastJump').html(data.lastJump);
-                $('#battery').html(data.battery);
-                $('#temp').html(data.temp);
-                setTimeout(updateValues, 3000);
-            });
-        }
-
-        function setTime(lastJump) {
-            var d = new Date();
-            $.post("/time", {
-                time: (Math.round(Date.now() / 1000) - (d.getTimezoneOffset() * 60))
-            }).done(function (data) {
-                console.log("/time loaded");
-            }).always(function (data) {
-                plot(lastJump, updateValues);
             });
         }
 
         $(document).ready(function () {
             getCss();
         });
+
+        function onSwipeRight() {
+            goTo('config.html');
+        }
+
+        function onSwipeLeft() {
+            goTo('log.html');
+        }
     </script>
 </head>
 <body>
     <div id="head">
-        <button type="button" class="icon primary" onclick="goTo('log.html')">
-            <svg width="25" height="25" fill="#fff">
-                <use xlink:href="#icon-book"></use>
-            </svg>
-        </button>
-        <button type="button" class="icon right" onclick="goTo('config.html')">
+        <span class="page-title float-right">Home</span>
+        <button type="button" class="icon" onclick="goTo('config.html')">
             <svg width="25" height="25" fill="#000">
                 <use xlink:href="#icon-cog"></use>
             </svg>
         </button>
+        <button type="button" class="icon no-action">
+            <svg width="25" height="25" fill="rgba(102, 102, 102, 0.5)">
+                <use xlink:href="#icon-home"></use>
+            </svg>
+        </button>
+        <button type="button" class="icon" onclick="goTo('log.html')">
+            <svg width="25" height="25" fill="#000">
+                <use xlink:href="#icon-book"></use>
+            </svg>
+        </button>
+
     </div>
     <table class="padded">
         <tbody>

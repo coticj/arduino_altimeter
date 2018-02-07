@@ -1,19 +1,19 @@
 void httpServer()
 {
   server.on("/restart", []() {
-    server.send ( 200, "text/plain", "ok");
+    server.send (200, "text/plain", "ok");
     ESP.restart();
   } );
 
   server.on("/all", []() {
-    server.send ( 200, "text/plain",
-                  "{\"temp\":\"" + String(getTemperature()) +
-                  "\",\"battery\":\"" + String(getBatteryPercentage()) +
-                  "\",\"time\":\"" + String(now()) +
-                  "\",\"location\":\"" + String(config.location) +
-                  "\",\"aircraft\":\"" + String(config.aircraft) +
-                  "\",\"lastJump\":\"" + String(config.lastJump) +
-                  "\"}");
+    server.send (200, "text/plain",
+                 "{\"temp\":\"" + String(getTemperature()) +
+                 "\",\"battery\":\"" + String(getBatteryPercentage()) +
+                 "\",\"time\":\"" + String(now()) +
+                 "\",\"location\":\"" + String(config.location) +
+                 "\",\"aircraft\":\"" + String(config.aircraft) +
+                 "\",\"lastJump\":\"" + String(config.lastJump) +
+                 "\"}");
     requestedTime = millis();
   });
 
@@ -28,7 +28,6 @@ void httpServer()
   });
 
   server.on("/time", []() {
-    Serial.println(F("wifi: time"));
     if (server.hasArg("time")) {
       setTime(server.arg("time").toInt());
       server.send(200, "text/html", "Time was set");
@@ -36,9 +35,20 @@ void httpServer()
     }
   });
 
+  server.on("/saveDetails", []() {
+    if (server.hasArg("id") && server.hasArg("details")) {
+
+      // TODO
+      // open log.txt
+      // find row starting with id
+      // append details
+
+      server.send(200, "text/html", "Details were saved");
+      requestedTime = millis();
+    }
+  });
+
   server.on("/clearLogs", []() {
-    SPIFFS.remove("/log.txt");
-    SPIFFS.remove("/lastId");
 
     // get last ID
     int lastId = 0;
@@ -61,6 +71,9 @@ void httpServer()
       SPIFFS.remove(filename);
     }
 
+    SPIFFS.remove("/log.txt");
+    SPIFFS.remove("/lastId");
+
     server.send(200, "text/html", "Logs were cleared.");
     requestedTime = millis();
   });
@@ -74,22 +87,15 @@ void httpServer()
                 "\"}";
     server.send (200, "text/plain", s);
     requestedTime = millis();
-  } );
+  });
 
   server.on("/updateConfig", []() {
-    Serial.println(F("wifi: updateConfig"));
-    String s =  "" + server.arg("ssid") +
-                "" + server.arg("password") +
-                "" +  server.arg("location") +
-                "" +  server.arg("aircraft") +
-                "" +  server.arg("lastJump");
-    Serial.println(s);
     saveConfiguration(server.arg("ssid"), server.arg("password"), server.arg("location"), server.arg("aircraft"), server.arg("lastJump"));
     loadConfiguration(config);
     server.sendHeader("Location", "/");
     server.send(301);
     requestedTime = millis();
-  } );
+  });
 
   server.onNotFound([]() {
     if (!handleFileRead(server.uri())) {
@@ -127,7 +133,6 @@ void saveConfiguration(String ssid, String password, String location, String air
   }
   file.close();
 }
-
 
 //webserver
 String formatBytes(size_t bytes) {

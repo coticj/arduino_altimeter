@@ -76,13 +76,15 @@
             var dateTime = new Date(Number(jumpData[2]) * 1000);
             var location = jumpData[3];
             var aircraft = jumpData[4];
+            var details;
+            if (jumpData.length == 6)
+                details = getJumpDetails(jumpData[5]);
 
             var tr = document.createElement("tr");
             tr.id = "tr_" + id;
             tr.onclick = function () {
                 toggleSelected(this.id);
             };
-            tableBody.appendChild(tr);
 
             if (!lastId) {
                 lastId = id;
@@ -109,7 +111,11 @@
                         altitide_arr[j] = altitude;
                     }
 
-                    var details = getJumpDetails(time_arr, altitide_arr);
+                    var saveDatails = false;
+                    if (!details) {
+                        saveDatails = true;
+                        details = calculateJumpDetails(id, time_arr, altitide_arr);
+                    }
 
                     tr.innerHTML =
                         "<td class=\"text-right\">" + jumpNumber.toString() + "</td>" +
@@ -123,9 +129,34 @@
                         "<td class=\"text-right\">" + Math.round(details.averageSpeed) + " km/h" + "</td>"
                         ;
 
-                    --i;
-                    if (i >= 0) {
-                        fillTableAjax(jumps, i);
+                    tableBody.appendChild(tr);
+
+                    if (saveDatails) {
+                        var d = details.exitAltitude + ";" +
+                            details.exitTime + ";" +
+                            details.openingAltitude + ";" +
+                            details.openingTime + ";" +
+                            details.maxSpeed + ";" +
+                            details.maxSpeedTime + ";" +
+                            details.averageSpeed + ";" +
+                            details.indexOfExit + ";" +
+                            details.indexOfOpening;
+
+                        $.post("/saveDetails", {
+                            id: id,
+                            details: d
+                        }).done(function (data) {
+                            console.log("/saveDetails posted");
+                        }).always(function (data) {
+                            --i;
+                            if (i >= 0)
+                                fillTableAjax(jumps, i);
+                        });
+                    }
+                    else {
+                        --i;
+                        if (i >= 0)
+                            fillTableAjax(jumps, i);
                     }
                 }
             });
@@ -159,13 +190,51 @@
         $(document).ready(function () {
             getCss();
         });
+
+        function onSwipeRight(yDown) {
+            $tableWrapper = $("#table-wrapper");
+            $table = $('#table');
+
+            var tableWrapperTop = $tableWrapper.offset().top;
+            var tableWrapperBottom = tableWrapperTop + $tableWrapper.height();
+            var tableWrapperWidth = $tableWrapper.width();
+            var tableLeft = $table.offset().left - $tableWrapper.offset().left;
+
+            if (yDown < tableWrapperTop || yDown > tableWrapperBottom || tableLeft >= 0)
+                goTo('index.html');
+        }
+
+        function onSwipeLeft(yDown) {
+            $tableWrapper = $("#table-wrapper");
+            $table = $('#table');
+
+            var tableWrapperTop = $tableWrapper.offset().top;
+            var tableWrapperBottom = tableWrapperTop + $tableWrapper.height();
+            var tableWrapperWidth = $tableWrapper.width();
+            var tableLeft = $table.offset().left - $tableWrapper.offset().left;
+            var tableRight = tableLeft + $table.width();
+
+            if (yDown < tableWrapperTop || yDown > tableWrapperBottom || tableRight <= tableWrapperWidth)
+                plotSelected();
+        }
     </script>
 </head>
 <body>
     <div id="head">
+        <span class="page-title float-right">Log</span>
+        <button type="button" class="icon" onclick="goTo('config.html')">
+            <svg width="25" height="25" fill="#000">
+                <use xlink:href="#icon-cog"></use>
+            </svg>
+        </button>
         <button type="button" class="icon" onclick="goTo('index.html')">
-            <svg width="25" height="25">
+            <svg width="25" height="25" fill="#000">
                 <use xlink:href="#icon-home"></use>
+            </svg>
+        </button>
+        <button type="button" class="icon no-action">
+            <svg width="25" height="25" fill="rgba(102, 102, 102, 0.5)">
+                <use xlink:href="#icon-book"></use>
             </svg>
         </button>
         <button type="button" class="icon primary" onclick="plotSelected()">
@@ -174,21 +243,24 @@
             </svg>
         </button>
     </div>
-    <table class="grid selectable">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Date and time</th>
-                <th>Location</th>
-                <th>Aircraft</th>
-                <th>Exit<br />altitude</th>
-                <th>Opening<br />altitude</th>
-                <th>Freefall<br />time</th>
-                <!--<th>Max speed<br />(5 sec avg)</th>-->
-                <th>Average<br />speed</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+    <div id="table-wrapper">
+        <table id="table" class="grid selectable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date and time</th>
+                    <th>Location</th>
+                    <th>Aircraft</th>
+                    <th>Exit<br />altitude</th>
+                    <th>Opening<br />altitude</th>
+                    <th>Freefall<br />time</th>
+                    <!--<th>Max speed<br />(5 sec avg)</th>-->
+                    <th>Average<br />speed</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    <span id="sp"></span>
 </body>
 </html>

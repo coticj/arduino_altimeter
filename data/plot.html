@@ -229,19 +229,38 @@
         $(document).ready(function () {
             getCss();
         });
+
+        function onSwipeRight() {
+            goTo('log.html');
+        }
+
+        function onSwipeLeft() {
+            refresh();
+        }
     </script>
 </head>
 <body>
     <div id="head">
         <div>
+            <span class="page-title float-right">Plot</span>
+            <button type="button" class="icon" onclick="goTo('config.html')">
+                <svg width="25" height="25" fill="#000">
+                    <use xlink:href="#icon-cog"></use>
+                </svg>
+            </button>
             <button type="button" class="icon" onclick="goTo('index.html')">
-                <svg width="25" height="25">
+                <svg width="25" height="25" fill="#000">
                     <use xlink:href="#icon-home"></use>
                 </svg>
             </button>
             <button type="button" class="icon" onclick="goTo('log.html')">
-                <svg width="25" height="25">
+                <svg width="25" height="25" fill="#000">
                     <use xlink:href="#icon-book"></use>
+                </svg>
+            </button>
+            <button type="button" class="icon no-action">
+                <svg width="25" height="25" fill="rgba(102, 102, 102, 0.5)">
+                    <use xlink:href="#icon-chart"></use>
                 </svg>
             </button>
             <button type="button" class="icon primary" onclick="refresh()">
@@ -252,7 +271,7 @@
         </div>
         <div>
             smoothing:
-            <input id="offset" type="text" onchange="onSmoothingChange()" value="10" style="width: 50px" />
+            <input id="offset" type="number" onchange="onSmoothingChange()" value="10" style="width: 50px" />
             = <span id="smoothing"></span><span style="display: inline-block; width: 20px;">
             </span>
             <!--<button type="button" class="icon primary" onclick="plot()">

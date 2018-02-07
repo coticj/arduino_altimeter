@@ -59,6 +59,26 @@ canvas + div {
             text-align: right;
         }
 
+#table-wrapper {
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    overflow-x: auto;
+    margin: 10px;
+    border-collapse: collapse;
+}
+
+table {
+    margin: 10px;
+    font-size: medium;
+    border-collapse: collapse;
+}
+
+#table-wrapper table {
+    margin: 0;
+}
+
 th, td {
     padding: 1px 5px;
 }
@@ -68,17 +88,11 @@ table.padded td {
     padding: 6px 5px;
 }
 
-table {
-    margin: 10px;
-    font-size: medium;
-    border-collapse: collapse;
+table.grid,
+table.grid th,
+table.grid td {
+    border: 1px solid #9fb3e6;
 }
-
-    table.grid,
-    table.grid th,
-    table.grid td {
-        border: 1px solid #9fb3e6;
-    }
 
 th {
     background-color: #e1e8fa;
@@ -112,17 +126,24 @@ button {
         color: #fff;
     }
 
-    button.right {
-        float: right;
-    }
+.float-right {
+    float: right;
+}
 
-    button.icon {
-        padding: 5px;
-    }
+button.icon {
+    padding: 5px;
+}
 
-    button + button {
-        margin-left: 5px
-    }
+button.no-action {
+    background-color: transparent;
+    border-width: 0 0 2px 0;
+    border-radius: 0;
+    cursor: default;
+}
+
+button + button {
+    margin-left: 5px
+}
 
 .buttons-vertical button {
     display: block;
@@ -131,3 +152,7 @@ button {
     .buttons-vertical button + button {
         margin: 10px 0 0 0;
     }
+
+.page-title {
+    color: rgba(102, 102, 102, 0.5);
+}

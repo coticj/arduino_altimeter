@@ -47,7 +47,7 @@
                         $('<option></option>').val(item).html(item)
                     );
                 });
-            }).done(function (data) {
+            }).always(function (data) {
                 getAircraft();
             });
         }
@@ -60,7 +60,7 @@
                         $('<option></option>').val(item).html(item)
                     );
                 });
-            }).done(function (data) {
+            }).always(function (data) {
                 fillValues();
             });
         }
@@ -76,47 +76,60 @@
             });
         }
 
-        $("#test").click(function (e) {
-            e.preventDefault();
-            $.get("/test", function (data) {
-                alert("LED test was performed.");
-            });
-        });
-
-        $("#restart").click(function (e) {
-            e.preventDefault();
-            $.get("/restart", function (data) {
-                alert("Restart was performed.");
-            });
-        });
-
-        $("#clearLog").click(function (e) {
-            e.preventDefault();
-            var checkstr = confirm('Are you sure you want to clear the log?');
-            if (checkstr == true) {
-                $.get("/clearLogs", function (data) {
-                    alert(data);
-                });
-            }
-            else {
-                return false;
-            }
-        });
-
         $(document).ready(function () {
+            $("#test").click(function (e) {
+                e.preventDefault();
+                $.get("/test", function (data) {
+                    alert("LED test was performed.");
+                });
+            });
+
+            $("#restart").click(function (e) {
+                e.preventDefault();
+                $.get("/restart", function (data) {
+                    alert("Restart was performed.");
+                });
+            });
+
+            $("#clearLog").click(function (e) {
+                e.preventDefault();
+                var checkstr = confirm('Are you sure you want to clear the log?');
+                if (checkstr == true) {
+                    $.get("/clearLogs", function (data) {
+                        alert(data);
+                    });
+                }
+                else {
+                    return false;
+                }
+            });
+
             getCss();
         });
+
+        function onSwipeRight() {
+        }
+
+        function onSwipeLeft() {
+            goTo('index.html');
+        }
     </script>
 </head>
 <body>
     <div id="head">
+        <span class="page-title float-right">Config</span>
+        <button type="button" class="icon no-action">
+            <svg width="25" height="25" fill="rgba(102, 102, 102, 0.5)">
+                <use xlink:href="#icon-cog"></use>
+            </svg>
+        </button>
         <button type="button" class="icon" onclick="goTo('index.html')">
-            <svg width="25" height="25">
+            <svg width="25" height="25" fill="#000">
                 <use xlink:href="#icon-home"></use>
             </svg>
         </button>
         <button type="button" class="icon" onclick="goTo('log.html')">
-            <svg width="25" height="25">
+            <svg width="25" height="25" fill="#000">
                 <use xlink:href="#icon-book"></use>
             </svg>
         </button>
@@ -163,7 +176,6 @@
                     <input type="number" id="lastJump" name="lastJump" value="">
                 </td>
             </tr>
-
             <tr>
                 <td></td>
                 <td>

@@ -28,6 +28,9 @@ function plotAjax(jumps, i, callback) {
     var dateTime = new Date(Number(jumpData[2]) * 1000);
     var location = jumpData[3];
     var aircraft = jumpData[4];
+    var details;
+    if (jumpData.length == 6)
+        details = getJumpDetails(jumpData[5]);
 
     var canvas = document.createElement("canvas");
     canvas.id = "chart_" + id;
@@ -65,8 +68,9 @@ function plotAjax(jumps, i, callback) {
             }
 
             var title = "jump " + jumpNumber;
-            var details = getJumpDetails(time_arr, altitide_arr);
-            console.log("jump details calculated");
+
+            if (!details)
+                details = calculateJumpDetails(id, time_arr, altitide_arr);
 
             drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
             console.log("chart drawn");
@@ -76,13 +80,11 @@ function plotAjax(jumps, i, callback) {
 
             --i;
             if (i >= 0) {
-                plotAjax(jumps, i);
+                plotAjax(jumps, i, callback);
             }
             else {
-                if (callback && typeof callback === "function") {
-                    console.log("attempting callback");
+                if (callback && typeof callback === "function")
                     callback();
-                }
             }
         }
     });
@@ -214,7 +216,28 @@ function drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details) {
     });
 }
 
-function getJumpDetails(time_arr, altitide_arr) {
+
+function getJumpDetails(jumpDataDetails) {
+
+    var d_arr = jumpDataDetails.split(";");
+
+    var details = new Object();
+    details.exitAltitude = Number(d_arr[0]);
+    details.exitTime = Number(d_arr[1]);
+    details.openingAltitude = Number(d_arr[2]);
+    details.openingTime = Number(d_arr[3]);
+    details.maxSpeed = Number(d_arr[4]).toFixed(2);
+    details.maxSpeedTime = d_arr[5];
+    details.averageSpeed = Number(d_arr[6]).toFixed(2);
+    details.indexOfExit = Number(d_arr[7]);
+    details.indexOfOpening = Number(d_arr[8]);
+
+    console.log("jump details extracted");
+
+    return details;
+}
+
+function calculateJumpDetails(id, time_arr, altitide_arr) {
     var offsetConstant = 10;
     var exitSpeedConstant = 50;
     var openingSpeedConstant = 50;
@@ -270,6 +293,9 @@ function getJumpDetails(time_arr, altitide_arr) {
     details.averageSpeed = avgSpeed.toFixed(2);
     details.indexOfExit = indexOfExit;
     details.indexOfOpening = indexOfOpening;
+
+    console.log("jump details calculated");
+
     return details;
 }
 
@@ -283,7 +309,8 @@ function displayjumpDetails(dateTime, location, aircraft, details, div) {
         "<tr><td>Freefall time: </td><td>" + (details.openingTime - details.exitTime) + " s" + "</td></tr>" +
         "<tr><td>Max speed (5 sec avg): </td><td>" + details.maxSpeed + " km/h (at " + details.maxSpeedTime + " s)" + "</td></tr>" +
         "<tr><td>Average speed: </td><td>" + details.averageSpeed + " km/h" + "</td></tr>" +
-        "</table>";
+        "</table>"
+        ;
 }
 
 Date.prototype.toString = function () {
@@ -301,3 +328,39 @@ function padNumber(n) {
 function goTo(t) {
     window.location.href = t;
 }
+
+document.addEventListener('touchstart', handleTouchStart, false);
+document.addEventListener('touchend', handleTouchEnd, false);
+var xDown = null;
+var yDown = null;
+
+function handleTouchStart(evt) {
+    xDown = evt.touches[0].clientX;
+    yDown = evt.touches[0].clientY;
+};
+
+function handleTouchEnd(evt) {
+    if (!xDown || !yDown) {
+        return;
+    }
+
+    var xUp = evt.changedTouches[0].clientX;
+    var yUp = evt.changedTouches[0].clientY;
+
+    var xDiff = xUp - xDown;
+    var yDiff = yUp - yDown;
+    var totalDiff = Math.sqrt(Math.pow(Math.abs(xDiff), 2) + Math.pow(Math.abs(yDiff), 2));
+
+    if (totalDiff > 50) {
+
+        if (Math.abs(xDiff) > Math.abs(yDiff)) {
+            if (xDiff > 0) // right swipe 
+                onSwipeRight(yDown);
+            else // left swipe
+                onSwipeLeft(yDown);
+        }
+
+        xDown = null;
+        yDown = null;
+    }
+};
