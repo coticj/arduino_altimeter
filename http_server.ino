@@ -38,18 +38,30 @@ void httpServer()
   server.on("/saveDetails", []() {
     if (server.hasArg("id") && server.hasArg("details")) {
 
-      // TODO
-      // open log.txt
-      // find row starting with id
-      // append details
+      if (SPIFFS.exists("/log.txt")) {
+        File fileLog = SPIFFS.open("/log.txt", "r");
 
-      server.send(200, "text/html", "Details were saved");
-      requestedTime = millis();
+        String logNew;
+        while (fileLog.available()) {
+          String s = fileLog.readStringUntil('\n');
+          if (s.startsWith(server.arg("id") + "|")) {
+            s.replace("||", "|/" + server.arg("details") + "||");
+          }
+          logNew += (s + '\n');
+        }
+        fileLog.close();
+
+        fileLog = SPIFFS.open("/log.txt", "w");
+        fileLog.print(logNew);
+        fileLog.close();
+
+        server.send(200, "text/html", "Details were saved");
+        requestedTime = millis();
+      }
     }
   });
 
   server.on("/clearLogs", []() {
-
     // get last ID
     int lastId = 0;
     if (SPIFFS.exists("/lastId")) {

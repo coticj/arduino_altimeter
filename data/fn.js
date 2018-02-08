@@ -69,22 +69,54 @@ function plotAjax(jumps, i, callback) {
 
             var title = "jump " + jumpNumber;
 
-            if (!details)
+            var saveDatails = false;
+            if (!details) {
+                saveDatails = true;
                 details = calculateJumpDetails(id, time_arr, altitide_arr);
+            }
 
             drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
             console.log("chart drawn");
 
-            displayjumpDetails(dateTime, location, aircraft, details, div);
+            displayJumpDetails(dateTime, location, aircraft, details, div);
             console.log("details displayed");
 
-            --i;
-            if (i >= 0) {
-                plotAjax(jumps, i, callback);
+            if (saveDatails) {
+                var d = details.exitAltitude + ";" +
+                    details.exitTime + ";" +
+                    details.openingAltitude + ";" +
+                    details.openingTime + ";" +
+                    details.maxSpeed + ";" +
+                    details.maxSpeedTime + ";" +
+                    details.averageSpeed + ";" +
+                    details.indexOfExit + ";" +
+                    details.indexOfOpening;
+
+                $.post("/saveDetails", {
+                    id: id,
+                    details: d
+                }).done(function (data) {
+                    console.log("/saveDetails posted");
+                }).always(function (data) {
+                    --i;
+                    if (i >= 0) {
+                        plotAjax(jumps, i, callback);
+                    }
+                    else {
+                        if (callback && typeof callback === "function")
+                            callback();
+                    }
+                });
             }
             else {
-                if (callback && typeof callback === "function")
-                    callback();
+                --i;
+                if (i >= 0) {
+                    plotAjax(jumps, i, callback);
+                }
+                else {
+                    if (callback && typeof callback === "function")
+                        callback();
+                }
             }
         }
     });
@@ -219,7 +251,7 @@ function drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details) {
 
 function getJumpDetails(jumpDataDetails) {
 
-    var d_arr = jumpDataDetails.split(";");
+    var d_arr = jumpDataDetails.substr(1).split(";");
 
     var details = new Object();
     details.exitAltitude = Number(d_arr[0]);
@@ -299,7 +331,7 @@ function calculateJumpDetails(id, time_arr, altitide_arr) {
     return details;
 }
 
-function displayjumpDetails(dateTime, location, aircraft, details, div) {
+function displayJumpDetails(dateTime, location, aircraft, details, div) {
     div.innerHTML = "<table>" +
         "<tr><td>Date and time of jump: </td><td>" + dateTime.toString() + "</td></tr>" +
         "<tr><td>Location: </td><td>" + location + "</td></tr>" +
@@ -359,8 +391,8 @@ function handleTouchEnd(evt) {
             else // left swipe
                 onSwipeLeft(yDown);
         }
-
-        xDown = null;
-        yDown = null;
     }
+
+    xDown = null;
+    yDown = null;
 };

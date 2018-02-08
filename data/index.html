@@ -93,7 +93,7 @@
 
                     logfile = data;
                     var jumps = logfile.split("\n");
-                    var lastJump = jumps[jumps.length - 1];
+                    var lastJump = jumps[jumps.length - 2];
 
                     plot(lastJump, function () {
                         getConfig(true);

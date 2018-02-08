@@ -121,6 +121,8 @@ void setup()
 
   SPIFFS.begin();
 
+  //printLog();
+
   //naloži konfiguracijo
   Serial.println(F("Loading config ..."));
   loadConfiguration(config);
