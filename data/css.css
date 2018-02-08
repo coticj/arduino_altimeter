@@ -10,7 +10,9 @@ select {
     font-size: medium;
 }
 
-#head, #foot {
+#head,
+#foot,
+#logPre {
     left: 0;
     right: 0;
     margin-left: auto;
@@ -35,6 +37,10 @@ select {
     border-style: solid;
     border-color: #9fb3e6;
     border-width: 1px 0 0 0;
+}
+
+#logPre {
+    overflow-x: auto;
 }
 
 canvas + div {

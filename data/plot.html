@@ -85,20 +85,20 @@
             smoothing.innerHTML = offset * 0.5 + " sec avg";
         }
 
-        function convertToJson() {
+        function convertLogToJson(logfile) {
 
-            json = document.getElementById('json');
+            logPre = document.getElementById('logPre');
 
-            json.innerHTML = "Reading log ...";
+            logPre.innerHTML = "Reading log ...";
 
             jsonString = "[\n";
 
             var jumps = logfile.split("||");
 
-            convertToJsonAjax(jumps, 0);
+            convertLogToJsonAjax(jumps, 0);
         }
 
-        function convertToJsonAjax(jumps, i) {
+        function convertLogToJsonAjax(jumps, i) {
             var jump = jumps[i].trim();
             var jumpData = jump.split("|");
             var id = jumpData[0];
@@ -106,7 +106,7 @@
             if (ids && !ids.includes(id.toString())) {
                 ++i;
                 if (i < jumps.length - 1) {
-                    convertToJsonAjax(jumps, i);
+                    convertLogToJsonAjax(jumps, i);
                 }
                 else {
                     jsonString += "\n]";
@@ -116,9 +116,13 @@
                 return;
             }
 
-            var dateTime = new Date(Number(jumpData[1]) * 1000);
-            var location = jumpData[2];
-            var aircraft = jumpData[3];
+            var jumpNumber = Number(jumpData[1]);
+            var dateTime = new Date(Number(jumpData[2]) * 1000);
+            var location = jumpData[3];
+            var aircraft = jumpData[4];
+            var details;
+            if (jumpData.length == 6)
+                details = getJumpDetails(jumpData[5]);
 
             $.ajax({
                 url: "logData_" + id + ".txt",
@@ -138,7 +142,8 @@
                     altitide_arr[j] = altitude;
                 }
 
-                var details = getJumpDetails(time_arr, altitide_arr);
+                if (!details)
+                    details = calculateJumpDetails(id, time_arr, altitide_arr);
 
                 if (jsonString.length > 2)
                     jsonString += ",\n";
@@ -162,21 +167,21 @@
 
                 ++i;
                 if (i < jumps.length - 1) {
-                    convertToJsonAjax(jumps, i);
+                    convertLogToJsonAjax(jumps, i);
                 }
                 else {
                     jsonString += "\n]";
-                    json.innerHTML = jsonString;
+                    logPre.innerHTML = jsonString;
                     jsonString = undefined;
                 }
             });
-        }
+        }     
 
         function printLog() {
 
-            json = document.getElementById('json');
+            logPre = document.getElementById('logPre');
 
-            json.innerHTML = "Reading log ...";
+            logPre.innerHTML = "Reading log ...";
 
             printString = "";
 
@@ -201,7 +206,7 @@
                     printLogAjax(jumps, i);
                 }
                 else {
-                    json.innerHTML = printString;
+                    logPre.innerHTML = printString;
                     printString = undefined;
                 }
             });
@@ -272,7 +277,7 @@
             <!--<button type="button" class="icon primary" onclick="plot()">
                Refresh
             </button>
-            <button type="button" onclick="convertToJson()">
+            <button type="button" onclick="convertLogToJsonAjax()">
                 Convert to JSON
             </button>
             <button type="button" onclick="printLog()">
@@ -280,7 +285,7 @@
             </button>-->
         </div>
     </div>
-    <!--<pre id="json"></pre>-->
+    <!--<pre id="logPre"></pre>-->
     <div id="charts"></div>
 </body>
 </html>
