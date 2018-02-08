@@ -15,24 +15,22 @@
         function getCss() {
             $.ajax({
                 url: "css.css",
-                dataType: "text",
-                success: function (data) {
-                    $("head").append("<style type='text/css'>" + data + "</style>");
-                    console.log("css.css loaded");
-                    getSvg();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                $("head").append("<style type='text/css'>" + data + "</style>");
+                console.log("css.css loaded");
+                getSvg();
             });
         }
 
         function getSvg() {
             $.ajax({
                 url: "defs.svg",
-                dataType: "text",
-                success: function (data) {
-                    $("head").append(data);
-                    console.log("defs.svg loaded");
-                    getFn();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                $("head").append(data);
+                console.log("defs.svg loaded");
+                getFn();
             });
         }
 
@@ -47,13 +45,11 @@
             $.ajax({
                 cache: false,
                 url: "log.txt",
-                dataType: "text",
-                success: function (data) {
-                    console.log("log.txt loaded");
-                    logfile = data;
-                    tableBody = document.getElementById("tableBody");
-                    fillTable();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                console.log("log.txt loaded");
+                logfile = data;
+                fillTable();
             });
         }
 
@@ -93,71 +89,70 @@
 
             $.ajax({
                 url: "logData_" + id + ".txt",
-                dataType: "text",
-                success: function (data) {
+                dataType: "text"
+            }).done(function (data) {
 
-                    var readings = data.split(";");
+                var readings = data.split(";");
 
-                    var time_arr = new Array(readings.length);
-                    var altitide_arr = new Array(readings.length);
-                    var speed_arr = new Array(readings.length);
+                var time_arr = new Array(readings.length);
+                var altitide_arr = new Array(readings.length);
+                var speed_arr = new Array(readings.length);
 
-                    for (var j = 0; j < readings.length; j++) {
-                        var reading = readings[j].split(",");
-                        var time = Number(reading[0]) / 100;
-                        var altitude = Number(reading[1]) / 100;
+                for (var j = 0; j < readings.length; j++) {
+                    var reading = readings[j].split(",");
+                    var time = Number(reading[0]) / 100;
+                    var altitude = Number(reading[1]) / 100;
 
-                        time_arr[j] = time;
-                        altitide_arr[j] = altitude;
-                    }
+                    time_arr[j] = time;
+                    altitide_arr[j] = altitude;
+                }
 
-                    var saveDatails = false;
-                    if (!details) {
-                        saveDatails = true;
-                        details = calculateJumpDetails(id, time_arr, altitide_arr);
-                    }
+                var saveDatails = false;
+                if (!details) {
+                    saveDatails = true;
+                    details = calculateJumpDetails(id, time_arr, altitide_arr);
+                }
 
-                    tr.innerHTML =
-                        "<td class=\"text-right\">" + jumpNumber.toString() + "</td>" +
-                        "<td>" + dateTime.toString() + "</td>" +
-                        "<td>" + location + "</td>" +
-                        "<td>" + aircraft + "</td>" +
-                        "<td class=\"text-right\">" + Math.round(details.exitAltitude) + " m" + "</td>" +
-                        "<td class=\"text-right\">" + Math.round(details.openingAltitude) + " m" + "</td>" +
-                        "<td class=\"text-right\">" + Math.round(details.openingTime - details.exitTime) + " s" + "</td>" +
-                        //"<td class=\"text-right\">" + Math.round(details.maxSpeed) + " km/h" + "</td>" +
-                        "<td class=\"text-right\">" + Math.round(details.averageSpeed) + " km/h" + "</td>"
-                        ;
+                tr.innerHTML =
+                    "<td class=\"text-right\">" + jumpNumber.toString() + "</td>" +
+                    "<td>" + dateTime.toString() + "</td>" +
+                    "<td>" + location + "</td>" +
+                    "<td>" + aircraft + "</td>" +
+                    "<td class=\"text-right\">" + Math.round(details.exitAltitude) + " m" + "</td>" +
+                    "<td class=\"text-right\">" + Math.round(details.openingAltitude) + " m" + "</td>" +
+                    "<td class=\"text-right\">" + Math.round(details.openingTime - details.exitTime) + " s" + "</td>" +
+                    //"<td class=\"text-right\">" + Math.round(details.maxSpeed) + " km/h" + "</td>" +
+                    "<td class=\"text-right\">" + Math.round(details.averageSpeed) + " km/h" + "</td>"
+                    ;
 
-                    tableBody.appendChild(tr);
+                tableBody.appendChild(tr);
 
-                    if (saveDatails) {
-                        var d = details.exitAltitude + ";" +
-                            details.exitTime + ";" +
-                            details.openingAltitude + ";" +
-                            details.openingTime + ";" +
-                            details.maxSpeed + ";" +
-                            details.maxSpeedTime + ";" +
-                            details.averageSpeed + ";" +
-                            details.indexOfExit + ";" +
-                            details.indexOfOpening;
+                if (saveDatails) {
+                    var d = details.exitAltitude + ";" +
+                        details.exitTime + ";" +
+                        details.openingAltitude + ";" +
+                        details.openingTime + ";" +
+                        details.maxSpeed + ";" +
+                        details.maxSpeedTime + ";" +
+                        details.averageSpeed + ";" +
+                        details.indexOfExit + ";" +
+                        details.indexOfOpening;
 
-                        $.post("/saveDetails", {
-                            id: id,
-                            details: d
-                        }).done(function (data) {
-                            console.log("/saveDetails posted");
-                        }).always(function (data) {
-                            --i;
-                            if (i >= 0)
-                                fillTableAjax(jumps, i);
-                        });
-                    }
-                    else {
+                    $.post("/saveDetails", {
+                        id: id,
+                        details: d
+                    }).done(function (data) {
+                        console.log("/saveDetails posted");
+                    }).always(function (data) {
                         --i;
                         if (i >= 0)
                             fillTableAjax(jumps, i);
-                    }
+                    });
+                }
+                else {
+                    --i;
+                    if (i >= 0)
+                        fillTableAjax(jumps, i);
                 }
             });
         }
@@ -168,9 +163,11 @@
 
         function plotSelected() {
             var ids = "";
-            for (var i = 0, tr; tr = tableBody.rows[i]; i++) {
-                if (tr.classList.contains("selected"))
-                    ids += tr.id.replace("tr_", "") + "|";
+            if (tableBody.rows) {
+                for (var i = 0, tr; tr = tableBody.rows[i]; i++) {
+                    if (tr.classList.contains("selected"))
+                        ids += tr.id.replace("tr_", "") + "|";
+                }
             }
 
             if (ids.length) {
@@ -188,6 +185,7 @@
         }
 
         $(document).ready(function () {
+            tableBody = document.getElementById("tableBody");
             getCss();
         });
 

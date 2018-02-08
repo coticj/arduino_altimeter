@@ -11,24 +11,22 @@
         function getCss() {
             $.ajax({
                 url: "css.css",
-                dataType: "text",
-                success: function (data) {
-                    $("head").append("<style type='text/css'>" + data + "</style>");
-                    console.log("css.css loaded");
-                    getSvg();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                $("head").append("<style type='text/css'>" + data + "</style>");
+                console.log("css.css loaded");
+                getSvg();
             });
         }
 
         function getSvg() {
             $.ajax({
                 url: "defs.svg",
-                dataType: "text",
-                success: function (data) {
-                    $("head").append(data);
-                    console.log("defs.svg loaded");
-                    getFn();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                $("head").append(data);
+                console.log("defs.svg loaded");
+                getFn();
             });
         }
 
@@ -95,7 +93,7 @@
                 e.preventDefault();
                 var checkstr = confirm('Are you sure you want to clear the log?');
                 if (checkstr == true) {
-                    $.get("/clearLogs", function (data) {
+                    $.get("/clearLog", function (data) {
                         alert(data);
                     });
                 }

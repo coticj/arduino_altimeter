@@ -15,24 +15,22 @@
         function getCss() {
             $.ajax({
                 url: "css.css",
-                dataType: "text",
-                success: function (data) {
-                    $("head").append("<style type='text/css'>" + data + "</style>");
-                    console.log("css.css loaded");
-                    getSvg();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                $("head").append("<style type='text/css'>" + data + "</style>");
+                console.log("css.css loaded");
+                getSvg();
             });
         }
 
         function getSvg() {
             $.ajax({
                 url: "defs.svg",
-                dataType: "text",
-                success: function (data) {
-                    $("head").append(data);
-                    console.log("defs.svg loaded");
-                    getFn();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                $("head").append(data);
+                console.log("defs.svg loaded");
+                getFn();
             });
         }
 
@@ -84,21 +82,22 @@
             $.ajax({
                 cache: false,
                 url: "log.txt",
-                dataType: "text",
-                success: function (data) {
-                    console.log("log.txt loaded");
+                dataType: "text"
+            }).done(function (data) {
+                console.log("log.txt loaded");
 
-                    windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
-                    lineWidth = Math.max(windowWidth / 600, 1);
+                windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+                lineWidth = Math.max(windowWidth / 600, 1);
 
-                    logfile = data;
-                    var jumps = logfile.split("\n");
-                    var lastJump = jumps[jumps.length - 2];
+                logfile = data;
+                var jumps = logfile.split("\n");
+                var lastJump = jumps[jumps.length - 2];
 
-                    plot(lastJump, function () {
-                        getConfig(true);
-                    });
-                }
+                plot(lastJump, function () {
+                    getConfig(true);
+                });
+            }).fail(function () {
+                getConfig(true);
             });
         }
 

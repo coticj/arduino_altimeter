@@ -21,24 +21,22 @@
         function getCss() {
             $.ajax({
                 url: "css.css",
-                dataType: "text",
-                success: function (data) {
-                    $("head").append("<style type='text/css'>" + data + "</style>");
-                    console.log("css.css loaded");
-                    getSvg();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                $("head").append("<style type='text/css'>" + data + "</style>");
+                console.log("css.css loaded");
+                getSvg();
             });
         }
 
         function getSvg() {
             $.ajax({
                 url: "defs.svg",
-                dataType: "text",
-                success: function (data) {
-                    $("head").append(data);
-                    console.log("defs.svg loaded");
-                    getFn();
-                }
+                dataType: "text"
+            }).done(function (data) {
+                $("head").append(data);
+                console.log("defs.svg loaded");
+                getFn();
             });
         }
 
@@ -60,25 +58,24 @@
             $.ajax({
                 cache: false,
                 url: "log.txt",
-                dataType: "text",
-                success: function (data) {
-                    console.log("log.txt loaded");
+                dataType: "text"
+            }).done(function (data) {
+                console.log("log.txt loaded");
 
-                    smoothing = document.getElementById('smoothing');
+                smoothing = document.getElementById('smoothing');
 
-                    windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
-                    lineWidth = Math.max(windowWidth / 600, 1);
+                windowWidth = document.body.clientWidth || document.documentElement.clientWidth || window.innerWidth;
+                lineWidth = Math.max(windowWidth / 600, 1);
 
-                    offsetInput = document.getElementById('offset');
-                    onSmoothingChange();
+                offsetInput = document.getElementById('offset');
+                onSmoothingChange();
 
-                    logfile = data;
+                logfile = data;
 
-                    var qsIds = getParameterByName("i");
-                    if (qsIds) {
-                        ids = qsIds.split("|");
-                        plot(logfile);
-                    }
+                var qsIds = getParameterByName("i");
+                if (qsIds) {
+                    ids = qsIds.split("|");
+                    plot(logfile);
                 }
             });
         }
@@ -125,53 +122,52 @@
 
             $.ajax({
                 url: "logData_" + id + ".txt",
-                dataType: "text",
-                success: function (data) {
-                    var readings = data.split(";");
+                dataType: "text"
+            }).done(function (data) {
+                var readings = data.split(";");
 
-                    var time_arr = new Array(readings.length);
-                    var altitide_arr = new Array(readings.length);
+                var time_arr = new Array(readings.length);
+                var altitide_arr = new Array(readings.length);
 
-                    for (var j = 0; j < readings.length; j++) {
-                        var reading = readings[j].split(",");
-                        var time = Number(reading[0]) / 100;
-                        var altitude = Number(reading[1]) / 100;
+                for (var j = 0; j < readings.length; j++) {
+                    var reading = readings[j].split(",");
+                    var time = Number(reading[0]) / 100;
+                    var altitude = Number(reading[1]) / 100;
 
-                        time_arr[j] = time;
-                        altitide_arr[j] = altitude;
-                    }
+                    time_arr[j] = time;
+                    altitide_arr[j] = altitude;
+                }
 
-                    var details = getJumpDetails(time_arr, altitide_arr);
+                var details = getJumpDetails(time_arr, altitide_arr);
 
-                    if (jsonString.length > 2)
-                        jsonString += ",\n";
+                if (jsonString.length > 2)
+                    jsonString += ",\n";
 
-                    jsonString += "{ \"id\": \"" + id + "\", ";
-                    jsonString += "\"datetime\": \"" + dateTime.toISOString() + "\", ";
-                    jsonString += "\"location\": \"" + location + "\", ";
-                    jsonString += "\"aircraft\": \"" + aircraft + "\", ";
-                    jsonString += "\"exitAltitude\": " + details.exitAltitude + ", ";
-                    jsonString += "\"openingAltitude\": " + details.openingAltitude + ", ";
-                    jsonString += "\"freeFallTime\": " + (details.openingTime - details.exitTime) + ", ";
-                    jsonString += "\"readings\": [ ";
+                jsonString += "{ \"id\": \"" + id + "\", ";
+                jsonString += "\"datetime\": \"" + dateTime.toISOString() + "\", ";
+                jsonString += "\"location\": \"" + location + "\", ";
+                jsonString += "\"aircraft\": \"" + aircraft + "\", ";
+                jsonString += "\"exitAltitude\": " + details.exitAltitude + ", ";
+                jsonString += "\"openingAltitude\": " + details.openingAltitude + ", ";
+                jsonString += "\"freeFallTime\": " + (details.openingTime - details.exitTime) + ", ";
+                jsonString += "\"readings\": [ ";
 
-                    for (var j = 0; j < readings.length; j++) {
-                        jsonString += "{\"time\": " + time_arr[j] + ", \"altitude\": " + altitide_arr[j] + "}";
-                        if (j < readings.length - 1)
-                            jsonString += ", ";
-                    }
+                for (var j = 0; j < readings.length; j++) {
+                    jsonString += "{\"time\": " + time_arr[j] + ", \"altitude\": " + altitide_arr[j] + "}";
+                    if (j < readings.length - 1)
+                        jsonString += ", ";
+                }
 
-                    jsonString += " ] }";
+                jsonString += " ] }";
 
-                    ++i;
-                    if (i < jumps.length - 1) {
-                        convertToJsonAjax(jumps, i);
-                    }
-                    else {
-                        jsonString += "\n]";
-                        json.innerHTML = jsonString;
-                        jsonString = undefined;
-                    }
+                ++i;
+                if (i < jumps.length - 1) {
+                    convertToJsonAjax(jumps, i);
+                }
+                else {
+                    jsonString += "\n]";
+                    json.innerHTML = jsonString;
+                    jsonString = undefined;
                 }
             });
         }
@@ -196,18 +192,17 @@
 
             $.ajax({
                 url: "logData_" + jumpId + ".txt",
-                dataType: "text",
-                success: function (data) {
-                    printString += jump + "||" + data + "<br>";
+                dataType: "text"
+            }).done(function (data) {
+                printString += jump + "||" + data + "<br>";
 
-                    ++i;
-                    if (i < jumps.length - 1) {
-                        printLogAjax(jumps, i);
-                    }
-                    else {
-                        json.innerHTML = printString;
-                        printString = undefined;
-                    }
+                ++i;
+                if (i < jumps.length - 1) {
+                    printLogAjax(jumps, i);
+                }
+                else {
+                    json.innerHTML = printString;
+                    printString = undefined;
                 }
             });
         }

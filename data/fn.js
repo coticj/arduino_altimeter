@@ -1,6 +1,6 @@
 function plot(log, callback) {
 
-    var charts = document.getElementById('charts')
+    var charts = document.getElementById("charts");
 
     while (charts.firstChild)
         charts.removeChild(charts.firstChild);
@@ -41,74 +41,63 @@ function plotAjax(jumps, i, callback) {
 
     $.ajax({
         url: "logData_" + id + ".txt",
-        dataType: "text",
-        success: function (data) {
+        dataType: "text"
+    }).done(function (data) {
 
-            console.log("logData_" + id + ".txt loaded");
+        console.log("logData_" + id + ".txt loaded");
 
-            var readings = data.split(";");
+        var readings = data.split(";");
 
-            var time_arr = new Array(readings.length);
-            var altitide_arr = new Array(readings.length);
-            var speed_arr = new Array(readings.length);
+        var time_arr = new Array(readings.length);
+        var altitide_arr = new Array(readings.length);
+        var speed_arr = new Array(readings.length);
 
-            for (var j = 0; j < readings.length; j++) {
-                var reading = readings[j].split(",");
-                var time = Number(reading[0]) / 100;
-                var altitude = Number(reading[1]) / 100;
-                var ofst = (offset > j) ? j : offset;
-                var readingOffset = readings[j - ofst].split(",");
-                var timeOffset = Number(readingOffset[0]) / 100;
-                var altitudeOffset = Number(readingOffset[1]) / 100;
-                var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
+        for (var j = 0; j < readings.length; j++) {
+            var reading = readings[j].split(",");
+            var time = Number(reading[0]) / 100;
+            var altitude = Number(reading[1]) / 100;
+            var ofst = (offset > j) ? j : offset;
+            var readingOffset = readings[j - ofst].split(",");
+            var timeOffset = Number(readingOffset[0]) / 100;
+            var altitudeOffset = Number(readingOffset[1]) / 100;
+            var speed = ((altitudeOffset - altitude) / (time - timeOffset)) * 3.6;
 
-                time_arr[j] = time;
-                altitide_arr[j] = altitude;
-                speed_arr[j] = speed.toFixed(2);
-            }
+            time_arr[j] = time;
+            altitide_arr[j] = altitude;
+            speed_arr[j] = speed.toFixed(2);
+        }
 
-            var title = "jump " + jumpNumber;
+        var title = "jump " + jumpNumber;
 
-            var saveDatails = false;
-            if (!details) {
-                saveDatails = true;
-                details = calculateJumpDetails(id, time_arr, altitide_arr);
-            }
+        var saveDatails = false;
+        if (!details) {
+            saveDatails = true;
+            details = calculateJumpDetails(id, time_arr, altitide_arr);
+        }
 
-            drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
-            console.log("chart drawn");
+        drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details);
+        console.log("chart drawn");
 
-            displayJumpDetails(dateTime, location, aircraft, details, div);
-            console.log("details displayed");
+        displayJumpDetails(dateTime, location, aircraft, details, div);
+        console.log("details displayed");
 
-            if (saveDatails) {
-                var d = details.exitAltitude + ";" +
-                    details.exitTime + ";" +
-                    details.openingAltitude + ";" +
-                    details.openingTime + ";" +
-                    details.maxSpeed + ";" +
-                    details.maxSpeedTime + ";" +
-                    details.averageSpeed + ";" +
-                    details.indexOfExit + ";" +
-                    details.indexOfOpening;
+        if (saveDatails) {
+            var d = details.exitAltitude + ";" +
+                details.exitTime + ";" +
+                details.openingAltitude + ";" +
+                details.openingTime + ";" +
+                details.maxSpeed + ";" +
+                details.maxSpeedTime + ";" +
+                details.averageSpeed + ";" +
+                details.indexOfExit + ";" +
+                details.indexOfOpening;
 
-                $.post("/saveDetails", {
-                    id: id,
-                    details: d
-                }).done(function (data) {
-                    console.log("/saveDetails posted");
-                }).always(function (data) {
-                    --i;
-                    if (i >= 0) {
-                        plotAjax(jumps, i, callback);
-                    }
-                    else {
-                        if (callback && typeof callback === "function")
-                            callback();
-                    }
-                });
-            }
-            else {
+            $.post("/saveDetails", {
+                id: id,
+                details: d
+            }).done(function (data) {
+                console.log("/saveDetails posted");
+            }).always(function (data) {
                 --i;
                 if (i >= 0) {
                     plotAjax(jumps, i, callback);
@@ -117,6 +106,16 @@ function plotAjax(jumps, i, callback) {
                     if (callback && typeof callback === "function")
                         callback();
                 }
+            });
+        }
+        else {
+            --i;
+            if (i >= 0) {
+                plotAjax(jumps, i, callback);
+            }
+            else {
+                if (callback && typeof callback === "function")
+                    callback();
             }
         }
     });

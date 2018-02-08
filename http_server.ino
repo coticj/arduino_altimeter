@@ -61,7 +61,7 @@ void httpServer()
     }
   });
 
-  server.on("/clearLogs", []() {
+  server.on("/clearLog", []() {
     // get last ID
     int lastId = 0;
     if (SPIFFS.exists("/lastId")) {
@@ -86,7 +86,7 @@ void httpServer()
     SPIFFS.remove("/log.txt");
     SPIFFS.remove("/lastId");
 
-    server.send(200, "text/html", "Logs were cleared.");
+    server.send(200, "text/html", "Log was cleared.");
     requestedTime = millis();
   });
 
