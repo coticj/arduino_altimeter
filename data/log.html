@@ -73,6 +73,7 @@
             var location = jumpData[3];
             var aircraft = jumpData[4];
             var details;
+
             if (jumpData.length == 6)
                 details = getJumpDetails(jumpData[5]);
 
@@ -87,47 +88,31 @@
                 tr.classList.add("selected");
             }
 
-            $.ajax({
-                url: "logData_" + id + ".txt",
-                dataType: "text"
-            }).done(function (data) {
+            if (!details) {
+                $.ajax({
+                    url: "logData_" + id + ".txt",
+                    dataType: "text"
+                }).done(function (data) {
 
-                var readings = data.split(";");
+                    var readings = data.split(";");
 
-                var time_arr = new Array(readings.length);
-                var altitide_arr = new Array(readings.length);
-                var speed_arr = new Array(readings.length);
+                    var time_arr = new Array(readings.length);
+                    var altitide_arr = new Array(readings.length);
+                    var speed_arr = new Array(readings.length);
 
-                for (var j = 0; j < readings.length; j++) {
-                    var reading = readings[j].split(",");
-                    var time = Number(reading[0]) / 100;
-                    var altitude = Number(reading[1]) / 100;
+                    for (var j = 0; j < readings.length; j++) {
+                        var reading = readings[j].split(",");
+                        var time = Number(reading[0]) / 100;
+                        var altitude = Number(reading[1]) / 100;
 
-                    time_arr[j] = time;
-                    altitide_arr[j] = altitude;
-                }
+                        time_arr[j] = time;
+                        altitide_arr[j] = altitude;
+                    }
 
-                var saveDatails = false;
-                if (!details) {
-                    saveDatails = true;
                     details = calculateJumpDetails(id, time_arr, altitide_arr);
-                }
 
-                tr.innerHTML =
-                    "<td class=\"text-right\">" + jumpNumber.toString() + "</td>" +
-                    "<td>" + dateTime.toString() + "</td>" +
-                    "<td>" + location + "</td>" +
-                    "<td>" + aircraft + "</td>" +
-                    "<td class=\"text-right\">" + Math.round(details.exitAltitude) + " m" + "</td>" +
-                    "<td class=\"text-right\">" + Math.round(details.openingAltitude) + " m" + "</td>" +
-                    "<td class=\"text-right\">" + Math.round(details.openingTime - details.exitTime) + " s" + "</td>" +
-                    //"<td class=\"text-right\">" + Math.round(details.maxSpeed) + " km/h" + "</td>" +
-                    "<td class=\"text-right\">" + Math.round(details.averageSpeed) + " km/h" + "</td>"
-                    ;
+                    addRow(tr, jumpNumber, dateTime, location, aircraft, details);
 
-                tableBody.appendChild(tr);
-
-                if (saveDatails) {
                     var d = details.exitAltitude + ";" +
                         details.exitTime + ";" +
                         details.openingAltitude + ";" +
@@ -148,13 +133,31 @@
                         if (i >= 0)
                             fillTableAjax(jumps, i);
                     });
-                }
-                else {
-                    --i;
-                    if (i >= 0)
-                        fillTableAjax(jumps, i);
-                }
-            });
+                });
+            }
+            else {
+                addRow(tr, jumpNumber, dateTime, location, aircraft, details);
+
+                --i;
+                if (i >= 0)
+                    fillTableAjax(jumps, i);
+            }
+        }
+
+        function addRow(tr, jumpNumber, dateTime, location, aircraft, details) {
+            tr.innerHTML =
+                "<td class=\"text-right\">" + jumpNumber.toString() + "</td>" +
+                "<td>" + dateTime.toString() + "</td>" +
+                "<td>" + location + "</td>" +
+                "<td>" + aircraft + "</td>" +
+                "<td class=\"text-right\">" + Math.round(details.exitAltitude) + " m" + "</td>" +
+                "<td class=\"text-right\">" + Math.round(details.openingAltitude) + " m" + "</td>" +
+                "<td class=\"text-right\">" + Math.round(details.openingTime - details.exitTime) + " s" + "</td>" +
+                //"<td class=\"text-right\">" + Math.round(details.maxSpeed) + " km/h" + "</td>" +
+                "<td class=\"text-right\">" + Math.round(details.averageSpeed) + " km/h" + "</td>"
+                ;
+
+            tableBody.appendChild(tr);
         }
 
         function plotLast() {
@@ -190,10 +193,10 @@
         });
 
         function onSwipeRight(yDown) {
-            $tableWrapper = $("#table-wrapper");
-            $table = $('#table');
+            var $tableWrapper = $("#table-wrapper");
+            var $table = $('#table');
 
-            var tableWrapperTop = $tableWrapper.offset().top;
+            var tableWrapperTop = $tableWrapper.offset().top - $(document).scrollTop();
             var tableWrapperBottom = tableWrapperTop + $tableWrapper.height();
             var tableWrapperWidth = $tableWrapper.width();
             var tableLeft = $table.offset().left - $tableWrapper.offset().left;
@@ -203,10 +206,10 @@
         }
 
         function onSwipeLeft(yDown) {
-            $tableWrapper = $("#table-wrapper");
-            $table = $('#table');
+            var $tableWrapper = $("#table-wrapper");
+            var $table = $('#table');
 
-            var tableWrapperTop = $tableWrapper.offset().top;
+            var tableWrapperTop = $tableWrapper.offset().top - $(document).scrollTop();
             var tableWrapperBottom = tableWrapperTop + $tableWrapper.height();
             var tableWrapperWidth = $tableWrapper.width();
             var tableLeft = $table.offset().left - $tableWrapper.offset().left;

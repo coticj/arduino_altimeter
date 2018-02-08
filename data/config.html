@@ -244,11 +244,10 @@
         }
 
         function onSwipeLeft(yDown) {
-            $logPre = $("#logPre");
+            var $logPre = $("#logPre");
 
-            var logPreTop = $logPre.offset().top;
+            var logPreTop = $logPre.offset().top - $(document).scrollTop();
             var logPreBottom = logPreTop + $logPre.height();
-
             if (yDown < logPreTop || yDown > logPreBottom)
                 goTo('index.html');
         }
