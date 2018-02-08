@@ -225,8 +225,9 @@
             });
 
             $("#clearLog").click(function (e) {
+                $("#logPre").html("");
                 e.preventDefault();
-                var checkstr = confirm('Are you sure you want to clear the log?');
+                var checkstr = confirm('Are you sure you want to remove all the jumps from the log?');
                 if (checkstr == true) {
                     $.get("/clearLog", function (data) {
                         alert(data);
