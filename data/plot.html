@@ -68,7 +68,7 @@
                 lineWidth = Math.max(windowWidth / 600, 1);
 
                 offsetInput = document.getElementById('offset');
-                onSmoothingChange();
+                onSmoothingChange(false);
 
                 logfile = data;
 
@@ -80,9 +80,11 @@
             });
         }
 
-        function onSmoothingChange() {
+        function onSmoothingChange(refreshChart) {
             offset = Number(offsetInput.value);
             smoothing.innerHTML = offset * 0.5 + " sec avg";
+            if (refreshChart)
+                refresh();
         }
 
         function convertLogToJson(logfile) {
@@ -175,7 +177,7 @@
                     jsonString = undefined;
                 }
             });
-        }     
+        }
 
         function printLog() {
 
@@ -213,7 +215,10 @@
         }
 
         function refresh() {
-            plot(logfile);
+            $pageNext.css("color", "#c33");
+            plot(logfile, function () {
+                resetPageNext();
+            });
         }
 
         function getParameterByName(name, url) {
@@ -230,19 +235,36 @@
             getCss();
         });
 
-        function onSwipeRight() {
-            goTo('log.html');
+        function onSwipeMoveRight(value) {
+            setPageNext("Log", value / 100)
         }
 
-        function onSwipeLeft() {
-            refresh();
+        function onSwipeMoveLeft(value) {
+            setPageNext("Refresh", value / 100)
+        }
+
+        function onSwipeEndRight(longSwipe, yDown) {
+            if (longSwipe)
+                goTo('log.html');
+            else
+                resetPageNext();
+        }
+
+        function onSwipeEndLeft(longSwipe, yDown) {
+            if (longSwipe)
+                refresh();
+            else
+                resetPageNext();
         }
     </script>
 </head>
 <body>
     <div id="head">
         <div>
-            <span class="page-title float-right">Plot</span>
+            <div id="page-title">
+                Plot<br />
+                <span id="page-next"></span>
+            </div>
             <button type="button" class="icon" onclick="goTo('config.html')">
                 <svg width="25" height="25" fill="#000">
                     <use xlink:href="#icon-cog"></use>
@@ -263,26 +285,12 @@
                     <use xlink:href="#icon-chart"></use>
                 </svg>
             </button>
-            <button type="button" class="icon primary" onclick="refresh()">
-                <svg width="25" height="25" fill="#fff">
-                    <use xlink:href="#icon-refresh"></use>
-                </svg>
-            </button>
         </div>
         <div>
             smoothing:
-            <input id="offset" type="number" onchange="onSmoothingChange()" value="10" style="width: 50px" />
+            <input id="offset" type="number" onchange="onSmoothingChange(true)" value="10" style="width: 50px" />
             = <span id="smoothing"></span><span style="display: inline-block; width: 20px;">
             </span>
-            <!--<button type="button" class="icon primary" onclick="plot()">
-               Refresh
-            </button>
-            <button type="button" onclick="convertLogToJsonAjax()">
-                Convert to JSON
-            </button>
-            <button type="button" onclick="printLog()">
-                Print entire log
-            </button>-->
         </div>
     </div>
     <!--<pre id="logPre"></pre>-->

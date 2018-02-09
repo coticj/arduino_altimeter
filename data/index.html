@@ -105,18 +105,35 @@
             getCss();
         });
 
-        function onSwipeRight() {
-            goTo('config.html');
+        function onSwipeMoveRight(value) {
+            setPageNext("Config", value / 100)
         }
 
-        function onSwipeLeft() {
-            goTo('log.html');
+        function onSwipeMoveLeft(value) {
+            setPageNext("Log", value / 100)
+        }
+
+        function onSwipeEndRight(longSwipe, yDown) {
+            if (longSwipe)
+                goTo('config.html');
+            else
+                resetPageNext();
+        }
+
+        function onSwipeEndLeft(longSwipe, yDown) {
+            if (longSwipe)
+                goTo('log.html');
+            else
+                resetPageNext();
         }
     </script>
 </head>
 <body>
     <div id="head">
-        <span class="page-title float-right">Home</span>
+        <div id="page-title">
+            Home<br />
+            <span id="page-next"></span>
+        </div>
         <button type="button" class="icon" onclick="goTo('config.html')">
             <svg width="25" height="25" fill="#000">
                 <use xlink:href="#icon-cog"></use>

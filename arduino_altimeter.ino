@@ -39,7 +39,7 @@ const long intervalOffGround = 500;           // interval at which to measure (m
 
 long interval = intervalGround;
 
-const int serverActiveAfterLastRequest = 120;  // seconds
+const int serverActiveAfterLastRequest = 60;  // seconds
 
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);

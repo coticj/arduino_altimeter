@@ -19,7 +19,11 @@ function plotAjax(jumps, i, callback) {
     if (ids && !ids.includes(id.toString())) {
         --i;
         if (i >= 0) {
-            plotAjax(jumps, i);
+            plotAjax(jumps, i, callback);
+        }
+        else {
+            if (callback && typeof callback === "function")
+                callback();
         }
         return;
     }
@@ -357,10 +361,12 @@ function padNumber(n) {
 }
 
 function goTo(t) {
+    $pageNext.css("color", "#dc3912");
     window.location.href = t;
 }
 
 document.addEventListener('touchstart', handleTouchStart, false);
+document.addEventListener('touchmove', handleTouchMove, false);
 document.addEventListener('touchend', handleTouchEnd, false);
 var xDown = null;
 var yDown = null;
@@ -368,6 +374,28 @@ var yDown = null;
 function handleTouchStart(evt) {
     xDown = evt.touches[0].clientX;
     yDown = evt.touches[0].clientY;
+};
+
+function handleTouchMove(evt) {
+    if (!xDown || !yDown) {
+        return;
+    }
+
+    var xCurrent = evt.touches[0].clientX;
+    var yCurrent = evt.touches[0].clientY;
+
+    var xDiff = xCurrent - xDown;
+    var yDiff = yCurrent - yDown;
+    var totalDiff = Math.sqrt(Math.pow(Math.abs(xDiff), 2) + Math.pow(Math.abs(yDiff), 2));
+
+    if (totalDiff > 50) {
+        if (Math.abs(xDiff) > Math.abs(yDiff)) {
+            if (xDiff > 0) // right swipe 
+                onSwipeMoveRight(parseInt(totalDiff) - 50, yDown);
+            else // left swipe
+                onSwipeMoveLeft(parseInt(totalDiff) - 50, yDown);
+        }
+    }
 };
 
 function handleTouchEnd(evt) {
@@ -382,16 +410,28 @@ function handleTouchEnd(evt) {
     var yDiff = yUp - yDown;
     var totalDiff = Math.sqrt(Math.pow(Math.abs(xDiff), 2) + Math.pow(Math.abs(yDiff), 2));
 
-    if (totalDiff > 50) {
-
-        if (Math.abs(xDiff) > Math.abs(yDiff)) {
-            if (xDiff > 0) // right swipe 
-                onSwipeRight(yDown);
-            else // left swipe
-                onSwipeLeft(yDown);
-        }
+    if (Math.abs(xDiff) > Math.abs(yDiff)) {
+        if (xDiff > 0) // right swipe 
+            onSwipeEndRight(totalDiff > 100, yDown);
+        else // left swipe
+            onSwipeEndLeft(totalDiff > 100, yDown);
     }
 
     xDown = null;
     yDown = null;
 };
+
+$pageNext = $("#page-next");
+
+function setPageNext(text, opacity) {
+    $pageNext.html(text);
+    if (opacity <= .5)
+        $pageNext.css("color", "rgba(102, 102, 102, " + opacity + ")");
+    else
+        $pageNext.css("color", "#36c");
+}
+
+function resetPageNext() {
+    $pageNext.html("");
+    $pageNext.css("color", "transparent");
+}
