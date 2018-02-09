@@ -145,7 +145,8 @@
                 if (jsonString.length > 2)
                     jsonString += ",\n";
 
-                jsonString += "{ \"id\": \"" + id + "\", ";
+                jsonString += "{ \"id\": " + id + ", ";
+                jsonString += "\"jumpNumber\": " + jumpNumber + ", ";
                 jsonString += "\"datetime\": \"" + dateTime.toISOString() + "\", ";
                 jsonString += "\"location\": \"" + location + "\", ";
                 jsonString += "\"aircraft\": \"" + aircraft + "\", ";
