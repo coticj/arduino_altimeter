@@ -251,15 +251,14 @@ function drawChart(canvas, title, time_arr, altitide_arr, speed_arr, details) {
     });
 }
 
-
 function getJumpDetails(jumpDataDetails) {
 
     var d_arr = jumpDataDetails.substr(1).split(";");
 
     var details = new Object();
-    details.exitAltitude = Number(d_arr[0]);
+    details.exitAltitude = Number(d_arr[0]).toFixed(2);
     details.exitTime = Number(d_arr[1]);
-    details.openingAltitude = Number(d_arr[2]);
+    details.openingAltitude = Number(d_arr[2]).toFixed(2);
     details.openingTime = Number(d_arr[3]);
     details.maxSpeed = Number(d_arr[4]).toFixed(2);
     details.maxSpeedTime = d_arr[5];
@@ -319,9 +318,9 @@ function calculateJumpDetails(id, time_arr, altitide_arr) {
     var avgSpeed = ((altitide_arr[indexOfExit] - altitide_arr[indexOfOpening]) / (time_arr[indexOfOpening] - time_arr[indexOfExit])) * 3.6;
 
     var details = new Object();
-    details.exitAltitude = altitide_arr[indexOfExit];
+    details.exitAltitude = altitide_arr[indexOfExit].toFixed(2);
     details.exitTime = time_arr[indexOfExit];
-    details.openingAltitude = altitide_arr[indexOfOpening];
+    details.openingAltitude = altitide_arr[indexOfOpening].toFixed(2);
     details.openingTime = time_arr[indexOfOpening];
     details.maxSpeed = speed_arr[indexOfMaxSpeed].toFixed(2);
     details.maxSpeedTime = time_arr[indexOfMaxSpeed];
@@ -434,4 +433,14 @@ function setPageNext(text, opacity) {
 function resetPageNext() {
     $pageNext.html("");
     $pageNext.css("color", "transparent");
+}
+
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
 }

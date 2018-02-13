@@ -14,7 +14,7 @@ void httpServer()
                  "\",\"aircraft\":\"" + String(config.aircraft) +
                  "\",\"lastJump\":\"" + String(config.lastJump) +
                  "\"}");
-    requestedTime = millis();
+    updateClientLeaseTime();
   });
 
   server.on("/test", []() {
@@ -24,14 +24,14 @@ void httpServer()
     flashStrip(blue, 4, 200);
     flashStrip(white, 4, 200);
     flashStrip(orange, 4, 200);
-    requestedTime = millis();
+    updateClientLeaseTime();
   });
 
   server.on("/time", []() {
     if (server.hasArg("time")) {
       setTime(server.arg("time").toInt());
       server.send(200, "text/html", "Time was set");
-      requestedTime = millis();
+      updateClientLeaseTime();
     }
   });
 
@@ -56,7 +56,45 @@ void httpServer()
         fileLog.close();
 
         server.send(200, "text/html", "Details were saved");
-        requestedTime = millis();
+        updateClientLeaseTime();
+      }
+    }
+  });
+
+  server.on("/editJump", []() {
+    if (server.hasArg("id") && server.hasArg("jumpNumber") && server.hasArg("dateTime") && server.hasArg("location") && server.hasArg("aircraft")) {
+
+      if (SPIFFS.exists("/log.txt")) {
+        File fileLog = SPIFFS.open("/log.txt", "r");
+
+        String logNew;
+        while (fileLog.available()) {
+          String s = fileLog.readStringUntil('\n');
+          if (s.startsWith(server.arg("id") + "|")) {
+
+            int endOfBasicData = s.indexOf("|/");
+            if (endOfBasicData == -1) {
+              endOfBasicData = s.indexOf("||");
+            }
+
+            s = server.arg("id") + "|" +
+                server.arg("jumpNumber") + "|" +
+                server.arg("dateTime") + "|" +
+                server.arg("location") + "|" +
+                server.arg("aircraft") +
+                s.substring(endOfBasicData);
+          }
+          logNew += (s + '\n');
+        }
+        fileLog.close();
+
+        fileLog = SPIFFS.open("/log.txt", "w");
+        fileLog.print(logNew);
+        fileLog.close();
+
+        server.sendHeader("Location", "/log.html");
+        server.send(301);
+        updateClientLeaseTime();
       }
     }
   });
@@ -87,7 +125,7 @@ void httpServer()
     SPIFFS.remove("/lastId");
 
     server.send(200, "text/html", "Log was cleared.");
-    requestedTime = millis();
+    updateClientLeaseTime();
   });
 
   server.on("/getConfig", []() {
@@ -98,7 +136,7 @@ void httpServer()
                 "\",\"lastJump\":\"" + String(config.lastJump) +
                 "\"}";
     server.send (200, "text/plain", s);
-    requestedTime = millis();
+    updateClientLeaseTime();
   });
 
   server.on("/updateConfig", []() {
@@ -106,13 +144,13 @@ void httpServer()
     loadConfiguration(config);
     server.sendHeader("Location", "/");
     server.send(301);
-    requestedTime = millis();
+    updateClientLeaseTime();
   });
 
   server.onNotFound([]() {
     if (!handleFileRead(server.uri())) {
       server.send(404, "text/plain", "FileNotFound");
-      requestedTime = millis();
+      updateClientLeaseTime();
     }
   });
 
@@ -180,7 +218,7 @@ String getContentType(String filename) {
 // webserver
 bool handleFileRead(String path) {
 
-  requestedTime = millis();
+  updateClientLeaseTime();
 
   Serial.println("handleFileRead: " + path);
   if (path.endsWith("/")) path += "index.html";
@@ -195,4 +233,10 @@ bool handleFileRead(String path) {
     return true;
   }
   return false;
+}
+
+void updateClientLeaseTime() {
+  clientLeaseTime = millis() + (serverActiveAfterLastRequest * 1000);
+  //Serial.print("new clientLeaseTime: ");
+  //Serial.println(clientLeaseTime);
 }

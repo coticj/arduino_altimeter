@@ -66,7 +66,7 @@ RTC_DATA_ATTR time_t sleepTimestamp = 0;
 
 bool startServer = false;
 bool clientConnected = false;
-time_t requestedTime = 0;
+time_t clientLeaseTime = 0;
 const char* host = "alti";
 
 // Configuration that we'll store on disk
@@ -198,7 +198,7 @@ void setup()
 void loop() {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - requestedTime >= serverActiveAfterLastRequest * 1000) {
+  if (currentMillis > clientLeaseTime) {
     clientConnected = false;
   }
 

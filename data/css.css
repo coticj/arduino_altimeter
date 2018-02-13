@@ -113,6 +113,10 @@ table.selectable tbody tr:hover {
     cursor: pointer;
 }
 
+.text-center {
+    text-align: center;
+}
+
 .text-right {
     text-align: right;
 }
