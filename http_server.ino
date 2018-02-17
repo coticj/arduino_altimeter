@@ -147,10 +147,13 @@ void httpServer()
     updateClientLeaseTime();
   });
 
+  server.on("/favicon.ico", []() {
+    handleNotFound();
+  });
+
   server.onNotFound([]() {
     if (!handleFileRead(server.uri())) {
-      server.send(404, "text/plain", "FileNotFound");
-      updateClientLeaseTime();
+      handleNotFound();
     }
   });
 
@@ -239,4 +242,9 @@ void updateClientLeaseTime() {
   clientLeaseTime = millis() + (serverActiveAfterLastRequest * 1000);
   //Serial.print("new clientLeaseTime: ");
   //Serial.println(clientLeaseTime);
+}
+
+void handleNotFound() {
+  server.send(404, "text/plain", "FileNotFound");
+  updateClientLeaseTime();
 }
