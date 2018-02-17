@@ -11,6 +11,7 @@
         var logfile;
         var tableBody;
         var lastId;
+        var edit = false;
 
         function getCss() {
             $.ajax({
@@ -155,9 +156,9 @@
                 "<td class=\"text-right\">" + Math.round(details.openingTime - details.exitTime) + " s" + "</td>" +
                 //"<td class=\"text-right\">" + Math.round(details.maxSpeed) + " km/h" + "</td>" +
                 "<td class=\"text-right\">" + Math.round(details.averageSpeed) + " km/h" + "</td>" +
-                "<td class=\"text-center\">" +
+                "<td class=\"visible-edit text-center\">" +
                 "<a href=\"edit.html?i=" + id + "\">" +
-                "<svg width=\"18\" height=\"18\" fill=\"" + (tr.classList.contains("selected") ? "#fff" : "#36c") + "\">" +
+                "<svg width=\"16\" height=\"16\" fill=\"#dc3912\">" +
                 "<use xlink:href=\"#icon-pencil\"></use>" +
                 "</svg>" +
                 "</a>" +
@@ -190,9 +191,21 @@
         }
 
         function toggleSelected(id) {
+            if (edit)
+                return;
+
             var tr = document.getElementById(id);
-            tr.classList.toggle("selected");
-            $("svg", "#" + id).css("fill", tr.classList.contains("selected") ? "#fff" : "#36c");
+            tr.classList.toggle("selected");          
+        }
+
+        function toggleEdit() {
+            edit = !edit;
+            $table = $(table);
+            $("#button-plot").toggle();
+            $("#button-edit").toggleClass("red");
+            $table.toggleClass("selectable");
+            $table.toggleClass("edit");
+            $("tr", $table).removeClass("selected");
         }
 
         $(document).ready(function () {
@@ -267,30 +280,35 @@
 </head>
 <body>
     <div id="head">
-        <div id="page-title">
-            Log<br />
-            <span id="page-next"></span>
+        <div>
+            <div id="page-title">
+                Log<br />
+                <span id="page-next"></span>
+            </div>
+            <button type="button" class="icon" onclick="goTo('config.html')">
+                <svg width="25" height="25" fill="#000">
+                    <use xlink:href="#icon-cog"></use>
+                </svg>
+            </button>
+            <button type="button" class="icon" onclick="goTo('index.html')">
+                <svg width="25" height="25" fill="#000">
+                    <use xlink:href="#icon-home"></use>
+                </svg>
+            </button>
+            <button type="button" class="icon no-action">
+                <svg width="25" height="25" fill="rgba(102, 102, 102, 0.5)">
+                    <use xlink:href="#icon-book"></use>
+                </svg>
+            </button>
+            <button type="button" id="button-plot" class="icon primary" onclick="plotSelected()">
+                <svg width="25" height="25" fill="#fff">
+                    <use xlink:href="#icon-chart"></use>
+                </svg>
+            </button>
         </div>
-        <button type="button" class="icon" onclick="goTo('config.html')">
-            <svg width="25" height="25" fill="#000">
-                <use xlink:href="#icon-cog"></use>
-            </svg>
-        </button>
-        <button type="button" class="icon" onclick="goTo('index.html')">
-            <svg width="25" height="25" fill="#000">
-                <use xlink:href="#icon-home"></use>
-            </svg>
-        </button>
-        <button type="button" class="icon no-action">
-            <svg width="25" height="25" fill="rgba(102, 102, 102, 0.5)">
-                <use xlink:href="#icon-book"></use>
-            </svg>
-        </button>
-        <button type="button" class="icon primary" onclick="plotSelected()">
-            <svg width="25" height="25" fill="#fff">
-                <use xlink:href="#icon-chart"></use>
-            </svg>
-        </button>
+        <div>
+            <button type="button" id="button-edit" class="small" onclick="toggleEdit()">Edit</button>
+        </div>
     </div>
     <div id="table-wrapper">
         <table id="table" class="grid selectable">
@@ -305,7 +323,7 @@
                     <th>Freefall<br />time</th>
                     <!--<th>Max speed<br />(5 sec avg)</th>-->
                     <th>Average<br />speed</th>
-                    <th>Edit</th>
+                    <th class="visible-edit">Edit</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
