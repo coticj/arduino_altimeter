@@ -147,7 +147,15 @@
 
         function addRow(tr, id, jumpNumber, dateTime, location, aircraft, details) {
             tr.innerHTML =
-                "<td class=\"text-right\">" + jumpNumber.toString() + "</td>" +
+                "<td class=\"visible-edit text-center\">" +
+                "<a href=\"edit.html?i=" + id + "\">" +
+                "<svg width=\"16\" height=\"16\" fill=\"#dc3912\">" +
+                "<use xlink:href=\"#icon-pencil\"></use>" +
+                "</svg>" +
+                "</a>" +
+                "</td>" +
+                "<td class=\"visible-edit text-right\">" + id + "</td>" +
+                "<td class=\"text-right\">" + jumpNumber + "</td>" +
                 "<td>" + dateTime.toString() + "</td>" +
                 "<td>" + location + "</td>" +
                 "<td>" + aircraft + "</td>" +
@@ -187,6 +195,7 @@
             }
             else {
                 alert("No jumps selected.");
+                resetPageNext();
             }
         }
 
@@ -195,7 +204,7 @@
                 return;
 
             var tr = document.getElementById(id);
-            tr.classList.toggle("selected");          
+            tr.classList.toggle("selected");
         }
 
         function toggleEdit() {
@@ -213,20 +222,10 @@
             getCss();
         });
 
-        function onSwipeMoveRight(value, yDown) {
-            var $tableWrapper = $("#table-wrapper");
-            var $table = $('#table');
+        var allowSwipeRight = false;
+        var allowSwipeLeft = false;
 
-            var tableWrapperTop = $tableWrapper.offset().top - $(document).scrollTop();
-            var tableWrapperBottom = tableWrapperTop + $tableWrapper.height();
-            var tableWrapperWidth = $tableWrapper.width();
-            var tableLeft = $table.offset().left - $tableWrapper.offset().left;
-
-            if (yDown < tableWrapperTop || yDown > tableWrapperBottom || tableLeft >= 0)
-                setPageNext("Home", value / 100)
-        }
-
-        function onSwipeMoveLeft(value, yDown) {
+        function onTouchStart(yDown) {
             var $tableWrapper = $("#table-wrapper");
             var $table = $('#table');
 
@@ -236,45 +235,32 @@
             var tableLeft = $table.offset().left - $tableWrapper.offset().left;
             var tableRight = tableLeft + $table.width();
 
-            if (yDown < tableWrapperTop || yDown > tableWrapperBottom || tableRight <= tableWrapperWidth)
-                setPageNext("Plot", value / 100)
+            allowSwipeRight = (yDown < tableWrapperTop || yDown > tableWrapperBottom || tableLeft >= 0);
+            allowSwipeLeft = (yDown < tableWrapperTop || yDown > tableWrapperBottom || tableRight <= tableWrapperWidth);
         }
 
-        function onSwipeEndRight(longSwipe, yDown) {
-            if (longSwipe) {
-                var $tableWrapper = $("#table-wrapper");
-                var $table = $('#table');
-
-                var tableWrapperTop = $tableWrapper.offset().top - $(document).scrollTop();
-                var tableWrapperBottom = tableWrapperTop + $tableWrapper.height();
-                var tableWrapperWidth = $tableWrapper.width();
-                var tableLeft = $table.offset().left - $tableWrapper.offset().left;
-
-                if (yDown < tableWrapperTop || yDown > tableWrapperBottom || tableLeft >= 0)
-                    goTo('index.html');
-            }
-            else {
-                resetPageNext();
-            }
+        function onSwipeMoveRight(value) {
+            if (allowSwipeRight)
+                setPageNext("Home", value / 100);
         }
 
-        function onSwipeEndLeft(longSwipe, yDown) {
-            if (longSwipe) {
-                var $tableWrapper = $("#table-wrapper");
-                var $table = $('#table');
+        function onSwipeMoveLeft(value) {
+            if (allowSwipeLeft && !edit)
+                setPageNext("Plot", value / 100);
+        }
 
-                var tableWrapperTop = $tableWrapper.offset().top - $(document).scrollTop();
-                var tableWrapperBottom = tableWrapperTop + $tableWrapper.height();
-                var tableWrapperWidth = $tableWrapper.width();
-                var tableLeft = $table.offset().left - $tableWrapper.offset().left;
-                var tableRight = tableLeft + $table.width();
-
-                if (yDown < tableWrapperTop || yDown > tableWrapperBottom || tableRight <= tableWrapperWidth)
-                    plotSelected();
-            }
-            else {
+        function onSwipeEndRight(longSwipe) {
+            if (longSwipe && allowSwipeRight)
+                goTo('index.html');
+            else
                 resetPageNext();
-            }
+        }
+
+        function onSwipeEndLeft(longSwipe) {
+            if (longSwipe && allowSwipeLeft && !edit)
+                plotSelected();
+            else
+                resetPageNext();
         }
     </script>
 </head>
@@ -314,6 +300,8 @@
         <table id="table" class="grid selectable">
             <thead>
                 <tr>
+                    <th class="visible-edit">Edit</th>
+                    <th class="visible-edit">Id</th>
                     <th>#</th>
                     <th>Date and time</th>
                     <th>Location</th>

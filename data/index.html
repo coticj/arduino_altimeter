@@ -105,22 +105,25 @@
             getCss();
         });
 
+        function onTouchStart(yDown) {
+        }
+
         function onSwipeMoveRight(value) {
-            setPageNext("Config", value / 100)
+            setPageNext("Config", value / 100);
         }
 
         function onSwipeMoveLeft(value) {
-            setPageNext("Log", value / 100)
+            setPageNext("Log", value / 100);
         }
 
-        function onSwipeEndRight(longSwipe, yDown) {
+        function onSwipeEndRight(longSwipe) {
             if (longSwipe)
                 goTo('config.html');
             else
                 resetPageNext();
         }
 
-        function onSwipeEndLeft(longSwipe, yDown) {
+        function onSwipeEndLeft(longSwipe) {
             if (longSwipe)
                 goTo('log.html');
             else

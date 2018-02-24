@@ -242,33 +242,32 @@
             getCss();
         });
 
-        function onSwipeMoveRight(value) {
-        }
+        var allowSwipeLeft = false;
 
-        function onSwipeMoveLeft(value) {
+        function onTouchStart(yDown) {
             var $logPre = $("#logPre");
 
             var logPreTop = $logPre.offset().top - $(document).scrollTop();
             var logPreBottom = logPreTop + $logPre.height();
-            if (yDown < logPreTop || yDown > logPreBottom)
-                setPageNext("Home", value / 100)
+            allowSwipeLeft = (yDown < logPreTop || yDown > logPreBottom);
         }
 
-        function onSwipeEndRight(longSwipe, yDown) {
+        function onSwipeMoveRight(value) {
         }
 
-        function onSwipeEndLeft(longSwipe, yDown) {
-            if (longSwipe) {
-                var $logPre = $("#logPre");
+        function onSwipeMoveLeft(value) {
+            if (allowSwipeLeft)
+                setPageNext("Home", value / 100);
+        }
 
-                var logPreTop = $logPre.offset().top - $(document).scrollTop();
-                var logPreBottom = logPreTop + $logPre.height();
-                if (yDown < logPreTop || yDown > logPreBottom)
-                    goTo('index.html');
-            }
-            else {
+        function onSwipeEndRight(longSwipe) {
+        }
+
+        function onSwipeEndLeft(longSwipe) {
+            if (longSwipe && allowSwipeLeft)
+                goTo('index.html');
+            else
                 resetPageNext();
-            }
         }
     </script>
 </head>

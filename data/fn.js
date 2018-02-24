@@ -373,6 +373,8 @@ var yDown = null;
 function handleTouchStart(evt) {
     xDown = evt.touches[0].clientX;
     yDown = evt.touches[0].clientY;
+
+    onTouchStart(yDown);
 };
 
 function handleTouchMove(evt) {
@@ -390,9 +392,9 @@ function handleTouchMove(evt) {
     if (totalDiff > 50) {
         if (Math.abs(xDiff) > Math.abs(yDiff)) {
             if (xDiff > 0) // right swipe 
-                onSwipeMoveRight(parseInt(totalDiff) - 50, yDown);
+                onSwipeMoveRight(parseInt(totalDiff) - 50);
             else // left swipe
-                onSwipeMoveLeft(parseInt(totalDiff) - 50, yDown);
+                onSwipeMoveLeft(parseInt(totalDiff) - 50);
         }
     }
 };
@@ -411,9 +413,9 @@ function handleTouchEnd(evt) {
 
     if (Math.abs(xDiff) > Math.abs(yDiff)) {
         if (xDiff > 0) // right swipe 
-            onSwipeEndRight(totalDiff > 100, yDown);
+            onSwipeEndRight(totalDiff > 100);
         else // left swipe
-            onSwipeEndLeft(totalDiff > 100, yDown);
+            onSwipeEndLeft(totalDiff > 100);
     }
 
     xDown = null;

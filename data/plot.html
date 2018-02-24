@@ -226,22 +226,25 @@
             getCss();
         });
 
+        function onTouchStart(yDown) {
+        }
+
         function onSwipeMoveRight(value) {
-            setPageNext("Log", value / 100)
+            setPageNext("Log", value / 100);
         }
 
         function onSwipeMoveLeft(value) {
-            setPageNext("Refresh", value / 100)
+            setPageNext("Refresh", value / 100);
         }
 
-        function onSwipeEndRight(longSwipe, yDown) {
+        function onSwipeEndRight(longSwipe) {
             if (longSwipe)
                 goTo('log.html');
             else
                 resetPageNext();
         }
 
-        function onSwipeEndLeft(longSwipe, yDown) {
+        function onSwipeEndLeft(longSwipe) {
             if (longSwipe)
                 refresh();
             else
