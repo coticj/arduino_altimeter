@@ -39,7 +39,7 @@ const long intervalOffGround = 500;           // interval at which to measure (m
 
 long interval = intervalGround;
 
-const int serverActiveAfterLastRequest = 60;  // seconds
+const int serverActiveAfterLastRequest = 120;  // seconds
 
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
@@ -365,9 +365,9 @@ void saveLog(int ignoreLastEntries) {
   int i = 0;
   for (i; i <= logIndex - ignoreLastEntries; i++) {
     float timeRelative = (float)(jumpLog[i].time - timeFirst) / 1000; // milliseconds to seconds
-    fileLogData.print(timeRelative * 100);
+    fileLogData.print(timeRelative * 100, 0);
     fileLogData.print(F(","));
-    fileLogData.print(jumpLog[i].altitude * 100);
+    fileLogData.print(jumpLog[i].altitude * 100, 0);
     if (i < (logIndex - ignoreLastEntries)) {
       fileLogData.print(F(";"));
     }
