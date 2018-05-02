@@ -39,7 +39,7 @@ const long intervalOffGround = 500;           // interval at which to measure (m
 
 long interval = intervalGround;
 
-const int serverActiveAfterLastRequest = 120;  // seconds
+const int serverActiveAfterLastRequest = 60;  // seconds
 
 void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration = -1, int finalDelay = -1);
@@ -110,7 +110,6 @@ void loadConfiguration(Config &config) {
 
 void setup()
 {
-
   WiFi.mode( WIFI_OFF );
 
   Serial.begin(115200);
@@ -164,6 +163,8 @@ void setup()
     if (resetCount == 3) {
       flashStrip(green, 1, 1000, 0);
 
+      WiFi.mode( WIFI_AP );
+
       WiFi.softAP(config.ssid, config.password);
 
       Serial.println();
@@ -171,6 +172,7 @@ void setup()
       Serial.println(WiFi.softAPIP());
 
       httpServer();
+      updateClientLeaseTime();
       startServer = true;
       clientConnected = true;
 
@@ -193,6 +195,7 @@ void setup()
         flashStrip(red, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
         SPIFFS.remove("/reset");
         Serial.println(F("Starting deep sleep."));
+        WiFi.mode( WIFI_OFF );
         esp_deep_sleep_start();
       }
 
@@ -212,9 +215,10 @@ void setup()
 void loop() {
   unsigned long currentMillis = millis();
 
-  if (currentMillis > clientLeaseTime) {
+  if (clientConnected && currentMillis > clientLeaseTime) {
     clientConnected = false;
     WiFi.mode( WIFI_OFF );
+    Serial.println(F("WIFI_OFF"));
   }
 
   if (startServer) {
