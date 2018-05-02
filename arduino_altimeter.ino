@@ -110,6 +110,9 @@ void loadConfiguration(Config &config) {
 
 void setup()
 {
+
+  WiFi.mode( WIFI_OFF );
+
   Serial.begin(115200);
   Serial.println(F(""));
   if (!bmp.begin()) {
@@ -182,6 +185,17 @@ void setup()
         Serial.println(F("Emulator started."));
       }
 
+      if (resetCount == 5) {
+        Serial.println(F("Manual deep sleep initiated."));
+        flashStrip(white, 1, 1000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+        flashStrip(yellow, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+        flashStrip(orange, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+        flashStrip(red, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+        SPIFFS.remove("/reset");
+        Serial.println(F("Starting deep sleep."));
+        esp_deep_sleep_start();
+      }
+
       flashStrip(flashColor, 1, 2000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
     }
     SPIFFS.remove("/reset");
@@ -200,6 +214,7 @@ void loop() {
 
   if (currentMillis > clientLeaseTime) {
     clientConnected = false;
+    WiFi.mode( WIFI_OFF );
   }
 
   if (startServer) {
@@ -333,7 +348,7 @@ void saveLog(int ignoreLastEntries) {
   ++config.lastJump;
   saveConfiguration(config.ssid, config.password, config.location, config.aircraft, String(config.lastJump));
 
-  Serial.print(F("jump ID:"));
+  Serial.print(F("jump ID: "));
   Serial.println(id);
 
   // save basic data to log.txt
