@@ -14,8 +14,7 @@ float getBatteryPercentage()
   return _min(map(getBatteryVoltage() * 10, 3.30 * 10, 4.2 * 10, 0, 100), 100); // Calculate Battery Level (Percent)
 }
 
-void signalBatteryPercentage() {
-  pinMode(ledPin, OUTPUT); //set builtin led
+void signalBatteryPercentage() { 
   float batt = getBatteryPercentage();
   if (batt < 20) {
     flashBuiltinLed(1, 2000); // no bars
@@ -36,20 +35,20 @@ void signalBatteryPercentage() {
 
 //led
 
-void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, int finalDelay) {
-  if (offDuration == -1) {
-    offDuration = onDuration;
-  };
-  for (int i = 0; i < numTimes; i++) {
-    setStrip(color);
-    delay(onDuration);
-    setStrip(off);
-    delay(offDuration);
-  }
-  if (finalDelay > 0) {
-    delay(finalDelay);
-  }
-}
+//void flashStrip(uint32_t color, int numTimes, int onDuration, int offDuration, int finalDelay) {
+//  if (offDuration == -1) {
+//    offDuration = onDuration;
+//  };
+//  for (int i = 0; i < numTimes; i++) {
+//    setStrip(color);
+//    delay(onDuration);
+//    setStrip(off);
+//    delay(offDuration);
+//  }
+//  if (finalDelay > 0) {
+//    delay(finalDelay);
+//  }
+//}
 
 void flashBuiltinLed(int numTimes, int onDuration, int offDuration, int finalDelay) {
   if (offDuration == -1) {
@@ -66,11 +65,11 @@ void flashBuiltinLed(int numTimes, int onDuration, int offDuration, int finalDel
   }
 }
 
-void setStrip(uint32_t c) {
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-  }
-  strip.show();
-}
+//void setStrip(uint32_t c) {
+//  for (uint16_t i = 0; i < strip.numPixels(); i++) {
+//    strip.setPixelColor(i, c);
+//  }
+//  strip.show();
+//}
 
 

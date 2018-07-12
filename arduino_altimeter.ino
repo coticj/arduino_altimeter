@@ -3,7 +3,7 @@
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
-#include <Adafruit_NeoPixel.h>
+//#include <Adafruit_NeoPixel.h>
 #include "FS.h"
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
@@ -14,20 +14,22 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 
+bool debug = false; // all serial.print commands check for debug
+
 WebServer server(80);
 
 Adafruit_BMP280 bmp; // I2C
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
+//Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, PIN, NEO_GRB + NEO_KHZ800);
 const int ledPin =  LED_BUILTIN;
 
 //colors
-uint32_t red = strip.Color(255, 0, 0);
-uint32_t green = strip.Color(0, 255, 0);
-uint32_t blue = strip.Color(0, 0, 255);
-uint32_t yellow = strip.Color(255, 255, 0);
-uint32_t orange = strip.Color(255, 127, 0);
-uint32_t white = strip.Color(127, 127, 127);
-uint32_t off = strip.Color(0, 0, 0);
+//uint32_t red = strip.Color(255, 0, 0);
+//uint32_t green = strip.Color(0, 255, 0);
+//uint32_t blue = strip.Color(0, 0, 255);
+//uint32_t yellow = strip.Color(255, 255, 0);
+//uint32_t orange = strip.Color(255, 127, 0);
+//uint32_t white = strip.Color(127, 127, 127);
+//uint32_t off = strip.Color(0, 0, 0);
 
 // Generally, you should use "unsigned long" for variables that hold time
 // The value will quickly become too large for an int to store
@@ -93,8 +95,10 @@ void loadConfiguration(Config &config) {
   // Parse the root object
   JsonObject &root = jsonBuffer.parseObject(fileConfig);
 
-  if (!root.success())
-    Serial.println(F("Failed to read file, using default configuration"));
+  if (!root.success()) {
+    if (debug)
+      Serial.println(F("Failed to read file, using default configuration"));
+  }
 
   // Copy values from the JsonObject to the Config
   strlcpy(config.ssid,                   // <- destination
@@ -110,23 +114,27 @@ void loadConfiguration(Config &config) {
 
 void setup()
 {
-  WiFi.mode( WIFI_OFF );
+  WiFi.mode(WIFI_OFF);
+  btStop();
 
   Serial.begin(115200);
-  Serial.println(F(""));
+  if (debug)
+    Serial.println(F(""));
   if (!bmp.begin()) {
-    Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
+    if (debug)
+      Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
     while (1);
   }
 
-  //printStatus(); // altitude je še 0.00, ker se ga še ne potrebuje
+  printStatus(); // altitude je še 0.00, ker se ga še ne potrebuje
 
   SPIFFS.begin();
 
-  //printLog();
+  printLog();
 
   //naloži konfiguracijo
-  Serial.println(F("Loading config ..."));
+  if (debug)
+    Serial.println(F("Loading config ..."));
   loadConfiguration(config);
 
   if (!firstBoot) {
@@ -138,10 +146,12 @@ void setup()
   updatePressureHistory();
   ifNoChangeOnGroundStartDeepSleep();
 
-  strip.begin();
-  flashStrip(off, 200, 0); // Initialize all pixels to 'off'
+  //strip.begin();
+  //flashStrip(off, 200, 0); // Initialize all pixels to 'off'
 
   if (firstBoot) {
+    pinMode(ledPin, OUTPUT); //set builtin led
+
     int resetCount = 1;
     if (SPIFFS.exists("/reset")) {
       File fileReset = SPIFFS.open("/reset", "r");
@@ -153,59 +163,75 @@ void setup()
       resetCount += s.toInt();
     }
 
-    Serial.print(F("reset count: "));
-    Serial.println(resetCount);
+    if (debug) {
+      Serial.print(F("reset count: "));
+      Serial.println(resetCount);
+    }
 
     File f = SPIFFS.open("/reset", "w");
     f.print(resetCount);
     f.close();
 
-    if (resetCount == 3) {
-      flashStrip(green, 1, 1000, 0);
+    flashBuiltinLed(resetCount, 300, 100, 2000); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
 
-      WiFi.mode( WIFI_AP );
+    if (resetCount == 2) {
+      //flashStrip(green, 1, 2000, 0);
+
+      WiFi.mode(WIFI_AP);
 
       WiFi.softAP(config.ssid, config.password);
 
-      Serial.println();
-      Serial.print(F("IP address: "));
-      Serial.println(WiFi.softAPIP());
+      if (debug) {
+        Serial.println();
+        Serial.print(F("IP address: "));
+        Serial.println(WiFi.softAPIP());
+      }
 
       httpServer();
       updateClientLeaseTime();
       startServer = true;
       clientConnected = true;
 
-      Serial.println(F("HTTP server started"));
+      if (debug)
+        Serial.println(F("HTTP server started"));
     }
+    //    else if (resetCount == 3) {
+    //      debug = true;
+    //      flashStrip(orange, 4, 400, 33); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+    //    }
     else {
-      uint32_t flashColor = orange;
+      //uint32_t flashColor = orange;
 
-      if (resetCount == 4) {
-        emulate = true;
-        flashColor = red;
-        Serial.println(F("Emulator started."));
-      }
+      //      if (resetCount == 4) {
+      //        emulate = true;
+      //        flashColor = red;
+      //        if (debug)
+      //          Serial.println(F("Emulator started."));
+      //      }
 
-      if (resetCount == 5) {
-        Serial.println(F("Manual deep sleep initiated."));
-        flashStrip(white, 1, 1000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
-        flashStrip(yellow, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
-        flashStrip(orange, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
-        flashStrip(red, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+      if (resetCount == 3) { // resetCount == 5
+        if (debug)
+          Serial.println(F("Manual deep sleep initiated."));
+        flashBuiltinLed(10, 100);
+        //        flashStrip(white, 1, 1000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+        //        flashStrip(yellow, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+        //        flashStrip(orange, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+        //        flashStrip(red, 1, 300, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
         SPIFFS.remove("/reset");
-        Serial.println(F("Starting deep sleep."));
-        WiFi.mode( WIFI_OFF );
+        if (debug)
+          Serial.println(F("Starting deep sleep."));
+        WiFi.mode(WIFI_OFF);
         esp_deep_sleep_start();
       }
-
-      flashStrip(flashColor, 1, 2000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+      else {
+        //flashStrip(flashColor, 1, 2000, 0); // Čaka. Če med tem resetiraš, se ohrani resetCount v datoteki, sicer se datoteka pobriše.
+      }
     }
     SPIFFS.remove("/reset");
 
     baseline = pressureHistory[logIndex];
-    flashStrip(off, 200, 0);
-    flashStrip(blue, 2, 500, 200, 500); // Signal OK
+    //    flashStrip(off, 200, 0);
+    //    flashStrip(blue, 2, 500, 200, 500); // Signal OK
     signalBatteryPercentage();
   }
 
@@ -217,8 +243,12 @@ void loop() {
 
   if (clientConnected && currentMillis > clientLeaseTime) {
     clientConnected = false;
-    WiFi.mode( WIFI_OFF );
-    Serial.println(F("WIFI_OFF"));
+    WiFi.mode(WIFI_OFF);
+    //    flashStrip(green, 1, 300, 0);
+    //    flashStrip(yellow, 1, 300, 0);
+    //    flashStrip(red, 1, 300, 0);
+    if (debug)
+      Serial.println(F("WIFI_OFF"));
   }
 
   if (startServer) {
@@ -230,7 +260,7 @@ void loop() {
 
     altitude = getAltitude();
 
-    //printStatus(); //odkomentiraj za debuging
+    printStatus();
 
     jumpLog[logIndex] = (logEntry) {
       millis(), altitude
@@ -276,25 +306,27 @@ void loop() {
       emulatorLoopIndex = 0;
       emulatorAltitude = 4600;
       interval = intervalGround;
-      flashStrip(orange, 1, 1000);
+      //flashStrip(orange, 1, 1000);
     }
   }
 }
 
 void printStatus() {
-  Serial.print(F("altitude: "));
-  Serial.print(altitude);
-  Serial.print(F(" m | logIndex: "));
-  Serial.print(logIndex);
-  Serial.print(F(" | pressure: "));
-  Serial.print(getPressure() * 100);
-  Serial.print(F(" Pa | temp: "));
-  Serial.print(bmp.readTemperature());
-  Serial.print(F(" °C | batt: "));
-  Serial.print(getBatteryVoltage());
-  Serial.print(F(" V; "));
-  Serial.print(getBatteryPercentage());
-  Serial.println(F(" %"));
+  if (debug) {
+    Serial.print(F("altitude: "));
+    Serial.print(altitude);
+    Serial.print(F(" m | logIndex: "));
+    Serial.print(logIndex);
+    Serial.print(F(" | pressure: "));
+    Serial.print(getPressure() * 100);
+    Serial.print(F(" Pa | temp: "));
+    Serial.print(bmp.readTemperature());
+    Serial.print(F(" °C | batt: "));
+    Serial.print(getBatteryVoltage());
+    Serial.print(F(" V; "));
+    Serial.print(getBatteryPercentage());
+    Serial.println(F(" %"));
+  }
 }
 
 void updatePressureHistory() {
@@ -352,12 +384,15 @@ void saveLog(int ignoreLastEntries) {
   ++config.lastJump;
   saveConfiguration(config.ssid, config.password, config.location, config.aircraft, String(config.lastJump));
 
-  Serial.print(F("jump ID: "));
-  Serial.println(id);
+  if (debug) {
+    Serial.print(F("jump ID: "));
+    Serial.println(id);
+  }
 
   // save basic data to log.txt
   File fileLog = SPIFFS.open("/log.txt", "a");
-  Serial.println(F("====== Writing to log.txt ========="));
+  if (debug)
+    Serial.println(F("====== Writing to log.txt ========="));
   time_t timestamp = now();
   fileLog.print(id);
   fileLog.print(F("|"));
@@ -379,7 +414,8 @@ void saveLog(int ignoreLastEntries) {
   String msg = "====== Writing to ";
   msg.concat(filename);
   msg.concat(" =========");
-  Serial.println(msg);
+  if (debug)
+    Serial.println(msg);
   unsigned long timeFirst = jumpLog[0].time;
   int i = 0;
   for (i; i <= logIndex - ignoreLastEntries; i++) {
@@ -400,17 +436,19 @@ void saveLog(int ignoreLastEntries) {
 }
 
 void printLog() {
-  File f = SPIFFS.open("/log.txt", "r");
-  if (!f) {
-    Serial.println(F("file open failed"));
-  }
-  else {
-    String s;
-    while (f.available()) {
-      s += char(f.read());
+  if (debug) {
+    File f = SPIFFS.open("/log.txt", "r");
+    if (!f) {
+      Serial.println(F("file open failed"));
     }
-    f.close();
-    Serial.println(s);
+    else {
+      String s;
+      while (f.available()) {
+        s += char(f.read());
+      }
+      f.close();
+      Serial.println(s);
+    }
   }
 }
 

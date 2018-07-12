@@ -19,11 +19,11 @@ void httpServer()
 
   server.on("/test", []() {
     server.send ( 200, "text/plain", "ok");
-    flashStrip(red, 4, 200);
-    flashStrip(green, 4, 200);
-    flashStrip(blue, 4, 200);
-    flashStrip(white, 4, 200);
-    flashStrip(orange, 4, 200);
+    //    flashStrip(red, 4, 200);
+    //    flashStrip(green, 4, 200);
+    //    flashStrip(blue, 4, 200);
+    //    flashStrip(white, 4, 200);
+    //    flashStrip(orange, 4, 200);
     updateClientLeaseTime();
   });
 
@@ -182,7 +182,8 @@ void saveConfiguration(String ssid, String password, String location, String air
 
   // Serialize JSON to file
   if (root.printTo(file) == 0) {
-    Serial.println(F("Failed to write to file"));
+    if (debug)
+      Serial.println(F("Failed to write to file"));
   }
   file.close();
 }
@@ -223,7 +224,8 @@ bool handleFileRead(String path) {
 
   updateClientLeaseTime();
 
-  Serial.println("handleFileRead: " + path);
+  if (debug)
+    Serial.println("handleFileRead: " + path);
   if (path.endsWith("/")) path += "index.html";
   String contentType = getContentType(path);
   String pathWithGz = path + ".gz";
@@ -240,8 +242,10 @@ bool handleFileRead(String path) {
 
 void updateClientLeaseTime() {
   clientLeaseTime = millis() + (serverActiveAfterLastRequest * 1000);
-  //Serial.print("new clientLeaseTime: ");
-  //Serial.println(clientLeaseTime);
+  if (debug) {
+    Serial.print("new clientLeaseTime: ");
+    Serial.println(clientLeaseTime);
+  }
 }
 
 void handleNotFound() {
